@@ -2,21 +2,19 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: [
-    '@nuxtjs/supabase',
-    '@nuxtjs/tailwindcss'
-  ],
+  modules: ['@nuxtjs/supabase', '@nuxt/ui'],
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseKey: process.env.SUPABASE_KEY,
     },
   },
+  css: ['~/assets/css/main.css'],
   supabase: {
     redirectOptions: {
       login: '/auth/login',
       callback: '/auth/confirm',
-      exclude: ['/auth/*']
-    }
-  }
+      exclude: ['/auth/*'],
+    },
+  },
 })
