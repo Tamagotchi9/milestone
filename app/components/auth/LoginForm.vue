@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const supabase = useSupabaseClient()
 const router = useRouter()
+const currentUserStore = useCurrentUserStore()
 
 const form = reactive({
   email: '',
@@ -14,11 +15,12 @@ async function login() {
   loading.value = true
   error.value = ''
 
-  const { error: err } = await supabase.auth.signInWithPassword(form)
+  const { data, error: err } = await supabase.auth.signInWithPassword(form)
 
   if (err) {
     error.value = err.message
   } else {
+    currentUserStore.setAuthState(data.session)
     await router.push('/dashboard') // todo
   }
 
