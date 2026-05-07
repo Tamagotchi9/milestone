@@ -29,3 +29,4 @@ description: >-
 
 - Top-level `const` values are **automatically** available in the template; use them for labels and icons referenced from both script and template.
 - `type` / `interface` aliases are fine; this skill does not require changing them.
+

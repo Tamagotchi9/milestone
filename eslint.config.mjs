@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
 import prettierConfig from 'eslint-config-prettier'
 import tseslint from 'typescript-eslint'
+import vueParser from 'vue-eslint-parser'
 
 export default [
   {
@@ -11,6 +12,16 @@ export default [
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   prettierConfig,
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        extraFileExtensions: ['.vue'],
+      },
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs,ts,vue}'],
     rules: {
