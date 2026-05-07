@@ -1,75 +1,60 @@
-# Nuxt Minimal Starter
+# Productivity App
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A Nuxt 4 productivity dashboard with Supabase auth/data and a Pomidoro timer flow.
 
-## Setup
+## What this project includes
 
-Make sure to install dependencies:
+- Dashboard layout with authenticated user context
+- Pomidoro timer page (`/dashboard/pomidoro`) with work/break cycles
+- Supabase integration for auth and app data
+- Nuxt UI + TailwindCSS for the interface
+- Pinia for client-side state
+
+## Tech stack
+
+- Nuxt 4
+- Vue 3 + TypeScript
+- `@nuxt/ui`
+- `@nuxtjs/supabase` + `@supabase/supabase-js`
+- Pinia
+- TailwindCSS
+- ESLint + Prettier
+
+## Getting started
+
+Install dependencies:
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Run development server:
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+App runs on `http://localhost:3000`.
 
-Build the application for production:
+## Scripts
 
-```bash
-# npm
-npm run build
+- `npm run dev` - start development server
+- `npm run build` - build for production
+- `npm run preview` - preview production build locally
+- `npm run generate` - generate static output
+- `npm run lint` - run ESLint
+- `npm run lint:fix` - fix lint issues
+- `npm run format` - format with Prettier
+- `npm run format:check` - check formatting
 
-# pnpm
-pnpm build
+## Project structure
 
-# yarn
-yarn build
+- `app/pages/dashboard/index.vue` - dashboard landing page
+- `app/pages/dashboard/pomidoro.vue` - Pomidoro route
+- `app/components/dashboard/PomidoroTimer.vue` - timer UI and cycle logic
+- `app/layouts/dashboard.vue` - dashboard layout shell
 
-# bun
-bun run build
-```
+## Notes
 
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+- This repository currently uses the spelling **Pomidoro** in routes/components.
+- If you plan to standardize to **Pomodoro**, update route/component names and links together.
