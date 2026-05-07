@@ -1,4 +1,4 @@
-# Productivity App
+# Milestone
 
 A Nuxt 4 productivity dashboard with Supabase auth/data and a Pomidoro timer flow.
 
