@@ -30,7 +30,14 @@ const displayName = computed(() => {
       </template>
 
       <p class="text-muted">
-        Try
+        Plan your
+        <NuxtLink
+          to="/dashboard/tasks"
+          class="font-medium text-primary hover:underline"
+        >
+          Tasks
+        </NuxtLink>
+        and then start
         <NuxtLink
           to="/dashboard/pomidoro"
           class="font-medium text-primary hover:underline"

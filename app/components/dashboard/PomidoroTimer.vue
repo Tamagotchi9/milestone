@@ -30,6 +30,7 @@ const phase = ref<Phase>(PHASE.work)
 const secondsLeft = ref(WORK_SEC)
 const isRunning = ref(false)
 const completedPomodoros = ref(0)
+const { focusedTask, setFocusedTask } = useTasks()
 
 /** Skip watch side-effects when phase changes from auto-cycle */
 const suppressPhaseWatch = ref(false)
@@ -140,6 +141,10 @@ const resetSession = () => {
   }
 }
 
+const clearFocusTask = () => {
+  setFocusedTask(null)
+}
+
 onBeforeUnmount(() => {
   clearTick()
 })
@@ -151,6 +156,10 @@ onBeforeUnmount(() => {
       <div class="space-y-1 text-center">
         <h1 class="text-2xl font-semibold text-highlighted">Pomidoro</h1>
         <p class="text-sm text-muted">25 / 5 / 15 classic Pomodoro</p>
+        <p v-if="focusedTask" class="text-sm text-default">
+          Focusing on:
+          <span class="font-medium text-highlighted">{{ focusedTask.title }}</span>
+        </p>
       </div>
     </template>
 
@@ -212,6 +221,18 @@ onBeforeUnmount(() => {
           completedPomodoros
         }}</span>
       </p>
+
+      <div v-if="focusedTask" class="text-center">
+        <UButton
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-x"
+          @click="clearFocusTask"
+        >
+          Clear focused task
+        </UButton>
+      </div>
     </div>
   </UCard>
 </template>

@@ -14,6 +14,12 @@ const nav = [
     exact: true,
   },
   {
+    to: '/dashboard/tasks',
+    label: 'Tasks',
+    icon: 'i-lucide-list-todo',
+    exact: true,
+  },
+  {
     to: '/dashboard/pomidoro',
     label: 'Pomidoro',
     icon: 'i-lucide-timer',
