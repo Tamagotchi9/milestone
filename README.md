@@ -22,30 +22,57 @@ A Nuxt 4 productivity dashboard with Supabase auth/data and a Pomidoro timer flo
 
 ## Getting started
 
+This project uses [pnpm](https://pnpm.io/) as its package manager.
+
+### Install pnpm
+
+**With Corepack** (recommended; included with Node.js 16.13+):
+
+```bash
+corepack enable
+corepack prepare pnpm@latest --activate
+```
+
+**With npm:**
+
+```bash
+npm install -g pnpm
+```
+
+**Standalone installer** (macOS/Linux):
+
+```bash
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+```
+
+See the [pnpm installation docs](https://pnpm.io/installation) for other platforms and options.
+
+### Setup and run
+
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
-Run development server:
+Run the development server:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 App runs on `http://localhost:3000`.
 
 ## Scripts
 
-- `npm run dev` - start development server
-- `npm run build` - build for production
-- `npm run preview` - preview production build locally
-- `npm run generate` - generate static output
-- `npm run lint` - run ESLint
-- `npm run lint:fix` - fix lint issues
-- `npm run format` - format with Prettier
-- `npm run format:check` - check formatting
+- `pnpm dev` - start development server
+- `pnpm build` - build for production
+- `pnpm preview` - preview production build locally
+- `pnpm generate` - generate static output
+- `pnpm lint` - run ESLint
+- `pnpm lint:fix` - fix lint issues
+- `pnpm format` - format with Prettier
+- `pnpm format:check` - check formatting
 
 ## Project structure
 
