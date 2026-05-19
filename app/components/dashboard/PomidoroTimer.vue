@@ -13,7 +13,6 @@ const LONG_SEC = 15 * 60
 
 const POMODOROS_BEFORE_LONG_BREAK = 4
 const TICK_MS = 1000
-const TIME_PAD = 2
 
 const durationFor = (p: Phase): number => {
   switch (p) {
@@ -51,11 +50,76 @@ const tabItems = [
 
 let tick: ReturnType<typeof setInterval> | null = null
 
-const timeLabel = computed(() => {
-  const m = Math.floor(secondsLeft.value / 60)
-  const s = secondsLeft.value % 60
-  return `${String(m).padStart(TIME_PAD, '0')}:${String(s).padStart(TIME_PAD, '0')}`
+const minutes = computed({
+  get: () => Math.floor(secondsLeft.value / 60),
+  set: (value: number) => {
+    const safe = Math.min(99, Math.max(0, value))
+    const secs = seconds.value
+    secondsLeft.value = safe * 60 + secs
+  }
 })
+
+const onMinutesInput = (e: Event) => {
+  if (isLocked.value) return
+
+  const el = e.target as HTMLInputElement
+
+  const cleaned = el.value.replace(/\D/g, '').slice(0, 2)
+
+  const value = Number(cleaned || 0)
+
+  minutes.value = Math.min(99, value)
+}
+
+const seconds = computed({
+  get: () => secondsLeft.value % 60,
+  set: (value: number) => {
+    const mins = minutes.value
+    const safe = Math.min(59, Math.max(0, value))
+
+    secondsLeft.value = mins * 60 + safe
+  }
+})
+
+const onSecondsInput = (e: Event) => {
+  if (isLocked.value) return
+
+  const el = e.target as HTMLInputElement
+
+  const cleaned = el.value.replace(/\D/g, '').slice(0, 2)
+
+  const value = Number(cleaned || 0)
+
+  seconds.value = Math.min(59, value)
+}
+
+const adjustMinutes = (delta: number) => {
+  const next = minutes.value + delta
+  minutes.value = Math.min(99, Math.max(0, next))
+}
+
+const adjustSeconds = (delta: number) => {
+  let sec = seconds.value + delta
+  let min = minutes.value
+
+  if (sec >= 60) {
+    min += 1
+    sec = 0
+  }
+
+  if (sec < 0) {
+    if (min > 0) {
+      min -= 1
+      sec = 59
+    } else {
+      sec = 0
+    }
+  }
+
+  minutes.value = Math.min(99, Math.max(0, min))
+  seconds.value = sec
+}
+const isLocked = computed(() => isRunning.value)
 
 const clearTick = () => {
   if (tick !== null) {
@@ -171,18 +235,70 @@ onBeforeUnmount(() => {
         color="primary"
         variant="pill"
         size="md"
-        class="w-full max-w-md mx-auto"
+        class="w-full max-w-md mx-auto [&_[role=tab]]:cursor-pointer"
       />
 
       <div class="flex justify-center">
-        <div
-          class="flex size-64 md:size-72 items-center justify-center"
-        >
-          <span
-            class="font-mono text-5xl md:text-7xl font-semibold tabular-nums tracking-tight text-highlighted"
-          >
-            {{ timeLabel }}
-          </span>
+        <div class="flex size-64 md:size-72 items-center justify-center group">
+          <div class="flex items-center justify-center gap-6">
+            <div class="flex flex-col items-center gap-2">
+              <UButton
+                v-if="!isLocked"
+                size="xs"
+                icon="i-lucide-plus"
+                class="cursor-pointer opacity-0 group-hover:opacity-300 transition-opacity duration-300"
+                @click="adjustMinutes(1)"
+              />
+
+              <input
+                :value="minutes"
+                type="text"
+                inputmode="numeric"
+                maxlength="2"
+                :disabled="isLocked"
+                class="w-24 bg-transparent text-center font-mono text-5xl md:text-7xl font-semibold outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                @input="onMinutesInput"
+              />
+
+              <UButton
+                v-if="!isLocked"
+                size="xs"
+                icon="i-lucide-minus"
+                class="cursor-pointer opacity-0 group-hover:opacity-300 transition-opacity duration-300"
+                @click="adjustMinutes(-1)"
+              />
+            </div>
+
+            <span class="font-mono text-5xl md:text-7xl font-semibold">:</span>
+
+            <div class="flex flex-col items-center gap-2">
+              <UButton
+                v-if="!isLocked"
+                size="xs"
+                icon="i-lucide-plus"
+                class="cursor-pointer opacity-0 group-hover:opacity-300 transition-opacity duration-300"
+                @click="adjustSeconds(1)"
+              />
+
+              <input
+                :value="seconds"
+                type="text"
+                inputmode="numeric"
+                maxlength="2"
+                :disabled="isLocked"
+                class="w-24 bg-transparent text-center font-mono text-5xl md:text-7xl font-semibold outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                @input="onSecondsInput"
+              />
+
+              <UButton
+                v-if="!isLocked"
+                size="xs"
+                icon="i-lucide-minus"
+                class="cursor-pointer opacity-0 group-hover:opacity-300 transition-opacity duration-300"
+                @click="adjustSeconds(-1)"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -194,7 +310,7 @@ onBeforeUnmount(() => {
           variant="soft"
           size="lg"
           leading
-          class="h-14 min-h-14 min-w-0 flex-1 justify-center text-base font-semibold transition-transform active:scale-[0.98]"
+          class="h-14 min-h-14 min-w-0 flex-1 cursor-pointer justify-center text-base font-semibold transition-transform active:scale-[0.98]"
           :ui="{ base: 'rounded-full' }"
           :icon="isRunning ? 'i-lucide-pause' : 'i-lucide-play'"
           @click="toggleRunning"
@@ -206,7 +322,7 @@ onBeforeUnmount(() => {
           variant="outline"
           size="lg"
           leading
-          class="h-14 min-h-14 min-w-0 flex-1 justify-center font-medium"
+          class="h-14 min-h-14 min-w-0 flex-1 cursor-pointer justify-center font-medium"
           :ui="{ base: 'rounded-full' }"
           :icon="'i-lucide-rotate-ccw'"
           @click="resetSession"
@@ -218,8 +334,8 @@ onBeforeUnmount(() => {
       <p class="text-center text-sm text-muted">
         Completed pomodoros:
         <span class="font-medium text-highlighted">{{
-          completedPomodoros
-        }}</span>
+            completedPomodoros
+          }}</span>
       </p>
 
       <div v-if="focusedTask" class="text-center">
