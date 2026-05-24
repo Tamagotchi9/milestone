@@ -5,6 +5,7 @@ import DashboardTask from '~/components/dashboard/tasks/Task.vue'
 const props = defineProps<{
   tasks: TaskItem[]
   focusedTaskId: string | null
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -40,7 +41,13 @@ const sortedTasks = computed(() => {
 </script>
 
 <template>
-  <div v-if="sortedTasks.length === 0">
+  <div v-if="loading">
+    <UCard>
+      <p class="text-sm text-muted">Loading tasks…</p>
+    </UCard>
+  </div>
+
+  <div v-else-if="sortedTasks.length === 0">
     <UCard>
       <p class="text-sm text-muted">
         No tasks yet. Add your first task above and start focusing.

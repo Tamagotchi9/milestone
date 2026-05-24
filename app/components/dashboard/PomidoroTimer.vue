@@ -30,7 +30,11 @@ const phase = ref<Phase>(PHASE.work)
 const secondsLeft = ref(WORK_SEC)
 const isRunning = ref(false)
 const completedPomodoros = ref(0)
-const { focusedTask, setFocusedTask } = useTasks()
+const { focusedTask, setFocusedTask, getTasks } = useTasks()
+
+onMounted(() => {
+  getTasks()
+})
 
 /** Skip watch side-effects when phase changes from auto-cycle */
 const suppressPhaseWatch = ref(false)

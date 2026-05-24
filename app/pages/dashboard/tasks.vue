@@ -9,6 +9,8 @@ const router = useRouter()
 
 const {
   tasks,
+  isLoading,
+  getTasks,
   addTask,
   removeTask,
   setTaskPriority,
@@ -19,8 +21,12 @@ const {
   setFocusedTask,
 } = useTasks()
 
-const createTask = (payload: CreateTaskPayload) => {
-  addTask(payload)
+onMounted(() => {
+  getTasks()
+})
+
+const createTask = async (payload: CreateTaskPayload) => {
+  await addTask(payload)
 }
 
 const startFocus = async (taskId: string) => {
@@ -34,6 +40,7 @@ const startFocus = async (taskId: string) => {
     <TaskForm @create="createTask" />
     <TaskList
       :tasks="tasks"
+      :loading="isLoading"
       :focused-task-id="focusedTaskId"
       @focus="startFocus"
       @remove="removeTask"
