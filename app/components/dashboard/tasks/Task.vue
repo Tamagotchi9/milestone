@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TaskItem, TaskPriority } from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
 
 const props = defineProps<{
   task: TaskItem
@@ -11,8 +11,8 @@ const emit = defineEmits<{
   remove: [taskId: string]
   setPriority: [taskId: string, priority: TaskPriority]
   setDeadline: [taskId: string, deadline: string | null]
-  addSubtask: [taskId: string, title: string]
-  toggleSubtask: [taskId: string, subtaskId: string]
+  addSubtask: [payload: CreateTaskDTO]
+  toggleSubtask: [subtaskId: string]
 }>()
 
 const priorityItems = [
@@ -30,13 +30,17 @@ const priorityBadgeColor = {
 const newSubtaskTitle = ref('')
 
 const addSubtaskToTask = () => {
-  emit('addSubtask', props.task.id, newSubtaskTitle.value)
+  emit('addSubtask', {
+    parentTaskId: props.task.id,
+    title: newSubtaskTitle.value,
+    priority: 'low',
+  })
   newSubtaskTitle.value = ''
 }
 
 const subtaskCompletion = computed(() => {
   if (props.task.subtasks.length === 0) return '0/0'
-  const completed = props.task.subtasks.filter((item) => item.completed).length
+  const completed = props.task.subtasks.filter((item) => item.status === 'completed').length
   return `${completed}/${props.task.subtasks.length}`
 })
 </script>
@@ -137,13 +141,13 @@ const subtaskCompletion = computed(() => {
           >
             <input
               type="checkbox"
-              :checked="subtask.completed"
+              :checked="subtask.status === 'completed'"
               class="size-4 rounded border-default"
-              @change="emit('toggleSubtask', task.id, subtask.id)"
+              @change="emit('toggleSubtask', subtask.id)"
             />
             <span
               :class="
-                subtask.completed ? 'line-through text-muted' : 'text-default'
+                subtask.status === 'completed' ? 'line-through text-muted' : 'text-default'
               "
             >
               {{ subtask.title }}

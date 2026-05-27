@@ -1,9 +1,5 @@
 import type { Database } from '~/types/database.types'
-import type {
-  CreateTaskPayload,
-  TaskItem,
-  TaskPriority,
-} from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
 const TASK_SELECT =
@@ -21,13 +17,6 @@ type TaskRow = Pick<
   | 'status'
 >
 
-const createId = (): string => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
-
 const normalizeDeadline = (deadline?: string | null): string | null => {
   if (!deadline) return null
   return deadline
@@ -40,10 +29,11 @@ const mapTaskRowToItem = (row: TaskRow, subtaskRows: TaskRow[]): TaskItem => ({
   priority: row.priority,
   deadline: row.deadline,
   createdAt: row.created_at ?? new Date().toISOString(),
+  status: row.status,
   subtasks: subtaskRows.map((subtask) => ({
     id: subtask.id,
     title: subtask.title,
-    completed: subtask.status === 'completed',
+    status: subtask.status,
   })),
 })
 
@@ -113,16 +103,22 @@ export const useTasks = () => {
     tasks.value = rowsToTaskItems(data ?? [])
   }
 
-  const addTask = async (payload: CreateTaskPayload) => {
+  const addTask = async (payload: CreateTaskDTO) => {
     const title = payload.title.trim()
     if (!title) return null
 
-    const { error } = await supabase.from('tasks').insert({
+    const values: Database['public']['Tables']['tasks']['Insert'] = {
       title,
       description: payload.description?.trim() ?? null,
       priority: payload.priority,
       deadline: normalizeDeadline(payload.deadline),
-    })
+    }
+
+    if (payload.parentTaskId) {
+      values['parent_task_id'] = payload.parentTaskId
+    }
+
+    const { error } = await supabase.from('tasks').insert(values)
 
     if (error) {
       console.error('addTask:', error.message)
@@ -159,24 +155,16 @@ export const useTasks = () => {
     task.deadline = normalizeDeadline(deadline)
   }
 
-  const addSubtask = (taskId: string, title: string) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    const normalizedTitle = title.trim()
-    if (!normalizedTitle) return
-    task.subtasks.push({
-      id: createId(),
-      title: normalizedTitle,
-      completed: false,
-    })
-  }
+  const toggleSubtask = async (subtaskId: string) => {
+    const { error } = await supabase.from('tasks').update({
+      status: 'completed',
+    }).eq('id', subtaskId)
 
-  const toggleSubtask = (taskId: string, subtaskId: string) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    const subtask = task.subtasks.find((item) => item.id === subtaskId)
-    if (!subtask) return
-    subtask.completed = !subtask.completed
+    if (error) {
+      // TODO: toast error
+      console.error('toggleSubtask:', error.message)
+      return
+    }
   }
 
   const setFocusedTask = (taskId: string | null) => {
@@ -193,7 +181,6 @@ export const useTasks = () => {
     removeTask,
     setTaskPriority,
     setTaskDeadline,
-    addSubtask,
     toggleSubtask,
     setFocusedTask,
   }

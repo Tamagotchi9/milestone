@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard' })
 
-import type { CreateTaskPayload } from '~/types/tasks.types'
+import type { CreateTaskDTO } from '~/types/tasks.types'
 import TaskForm from '~/components/dashboard/tasks/TaskForm.vue'
 import TaskList from '~/components/dashboard/tasks/TaskList.vue'
 
@@ -15,7 +15,6 @@ const {
   removeTask,
   setTaskPriority,
   setTaskDeadline,
-  addSubtask,
   toggleSubtask,
   focusedTaskId,
   setFocusedTask,
@@ -25,7 +24,7 @@ onMounted(() => {
   getTasks()
 })
 
-const createTask = async (payload: CreateTaskPayload) => {
+const createTask = async (payload: CreateTaskDTO) => {
   await addTask(payload)
 }
 
@@ -46,7 +45,7 @@ const startFocus = async (taskId: string) => {
       @remove="removeTask"
       @set-priority="setTaskPriority"
       @set-deadline="setTaskDeadline"
-      @add-subtask="addSubtask"
+      @add-subtask="createTask"
       @toggle-subtask="toggleSubtask"
     />
   </div>

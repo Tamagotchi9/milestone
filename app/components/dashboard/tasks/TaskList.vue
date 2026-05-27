@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TaskItem, TaskPriority } from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
 import DashboardTask from '~/components/dashboard/tasks/Task.vue'
 
 const props = defineProps<{
@@ -13,8 +13,8 @@ const emit = defineEmits<{
   remove: [taskId: string]
   setPriority: [taskId: string, priority: TaskPriority]
   setDeadline: [taskId: string, deadline: string | null]
-  addSubtask: [taskId: string, title: string]
-  toggleSubtask: [taskId: string, subtaskId: string]
+  addSubtask: [payload: CreateTaskDTO]
+  toggleSubtask: [subtaskId: string]
 }>()
 
 const priorityOrder = {
@@ -69,9 +69,9 @@ const sortedTasks = computed(() => {
       @set-deadline="
         (taskId, deadline) => emit('setDeadline', taskId, deadline)
       "
-      @add-subtask="(taskId, title) => emit('addSubtask', taskId, title)"
+      @add-subtask="(payload) => emit('addSubtask', payload)"
       @toggle-subtask="
-        (taskId, subtaskId) => emit('toggleSubtask', taskId, subtaskId)
+        (subtaskId) => emit('toggleSubtask', subtaskId)
       "
     />
   </div>

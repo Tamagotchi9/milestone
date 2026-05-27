@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { CreateTaskPayload, TaskPriority } from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskPriority } from '~/types/tasks.types'
 
 const emit = defineEmits<{
-  create: [payload: CreateTaskPayload]
+  create: [payload: CreateTaskDTO]
 }>()
 
 const priorityItems = [
