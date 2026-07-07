@@ -156,9 +156,12 @@ export const useTasks = () => {
   }
 
   const toggleSubtask = async (subtaskId: string) => {
-    const { error } = await supabase.from('tasks').update({
-      status: 'completed',
-    }).eq('id', subtaskId)
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'completed',
+      })
+      .eq('id', subtaskId)
 
     if (error) {
       // TODO: toast error
