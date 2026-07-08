@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
+import InputDateCalendar from '~/components/inputs/input-date-calendar.vue'
 
 const props = defineProps<{
   task: TaskItem
@@ -43,6 +44,11 @@ const subtaskCompletion = computed(() => {
   const completed = props.task.subtasks.filter((item) => item.status === 'completed').length
   return `${completed}/${props.task.subtasks.length}`
 })
+
+const { formatDateToDotted } = useDateFormat()
+const formattedDeadline = computed(() => formatDateToDotted(props.task.deadline))
+
+const showTaskEdit = computed(() => false)
 </script>
 
 <template>
@@ -72,7 +78,7 @@ const subtaskCompletion = computed(() => {
           <p class="text-xs text-muted">
             Deadline:
             <span class="text-highlighted">
-              {{ task.deadline || 'Not set' }}
+              {{ formattedDeadline }}
             </span>
             · Subtasks {{ subtaskCompletion }}
           </p>
@@ -100,7 +106,7 @@ const subtaskCompletion = computed(() => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div v-if="showTaskEdit" class="grid grid-cols-1 gap-3 md:grid-cols-2">
         <UFormField label="Priority">
           <USelect
             :model-value="task.priority"
@@ -117,13 +123,9 @@ const subtaskCompletion = computed(() => {
           />
         </UFormField>
         <UFormField label="Deadline">
-          <UInput
-            :model-value="task.deadline ?? ''"
-            type="date"
-            class="w-full"
-            @update:model-value="
-              (value) => emit('setDeadline', task.id, String(value || ''))
-            "
+          <InputDateCalendar
+            :model-value="task.deadline"
+            @update:model-value="(value) => emit('setDeadline', task.id, value)"
           />
         </UFormField>
       </div>
