@@ -1,74 +1,74 @@
-import type {
-  CreateTaskPayload,
-  TaskItem,
-  TaskPriority,
-} from '~/types/tasks.types'
-const STORAGE_KEY = 'milestone.tasks.v1'
+import type { Database } from '~/types/database.types'
+import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
-const createId = (): string => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
+const TASK_SELECT =
+  'id, title, description, priority, deadline, created_at, parent_task_id, status' as const
+
+type TaskRow = Pick<
+  Database['public']['Tables']['tasks']['Row'],
+  | 'id'
+  | 'title'
+  | 'description'
+  | 'priority'
+  | 'deadline'
+  | 'created_at'
+  | 'parent_task_id'
+  | 'status'
+>
 
 const normalizeDeadline = (deadline?: string | null): string | null => {
   if (!deadline) return null
   return deadline
 }
 
-const parseTasks = (value: string): TaskItem[] => {
-  try {
-    const parsed = JSON.parse(value)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((item): item is TaskItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.title === 'string' &&
-        typeof item?.description === 'string' &&
-        (item?.priority === 'low' ||
-          item?.priority === 'medium' ||
-          item?.priority === 'high') &&
-        (typeof item?.deadline === 'string' || item?.deadline === null) &&
-        typeof item?.createdAt === 'string' &&
-        Array.isArray(item?.subtasks)
-      )
-    })
-  } catch {
-    return []
+const mapTaskRowToItem = (row: TaskRow, subtaskRows: TaskRow[]): TaskItem => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? '',
+  priority: row.priority,
+  deadline: row.deadline,
+  createdAt: row.created_at ?? new Date().toISOString(),
+  status: row.status,
+  subtasks: subtaskRows.map((subtask) => ({
+    id: subtask.id,
+    title: subtask.title,
+    status: subtask.status,
+  })),
+})
+
+const rowsToTaskItems = (rows: TaskRow[]): TaskItem[] => {
+  const childrenByParent = new Map<string, TaskRow[]>()
+
+  for (const row of rows) {
+    if (!row.parent_task_id) continue
+    const siblings = childrenByParent.get(row.parent_task_id) ?? []
+    siblings.push(row)
+    childrenByParent.set(row.parent_task_id, siblings)
   }
+
+  return rows
+    .filter((row) => !row.parent_task_id)
+    .map((row) => mapTaskRowToItem(row, childrenByParent.get(row.id) ?? []))
 }
 
 export const useTasks = () => {
+  const supabase = useSupabaseClient<Database>()
   const tasks = useState<TaskItem[]>('tasks.items', () => [])
   const focusedTaskId = useState<string | null>(
     'tasks.focusedTaskId',
     () => null,
   )
-  const hasLoaded = useState<boolean>('tasks.loaded', () => false)
-  const hasPersistence = useState<boolean>('tasks.persistence', () => false)
+  const isLoading = useState<boolean>('tasks.loading', () => false)
+  const hasFocusPersistence = useState<boolean>(
+    'tasks.focusPersistence',
+    () => false,
+  )
 
-  if (import.meta.client && !hasLoaded.value) {
-    const rawTasks = window.localStorage.getItem(STORAGE_KEY)
-    if (rawTasks) {
-      tasks.value = parseTasks(rawTasks)
-    }
-
+  if (import.meta.client && !hasFocusPersistence.value) {
     const rawFocusedTaskId = window.localStorage.getItem(FOCUS_STORAGE_KEY)
     focusedTaskId.value =
       rawFocusedTaskId && rawFocusedTaskId.length > 0 ? rawFocusedTaskId : null
-    hasLoaded.value = true
-  }
-
-  if (import.meta.client && !hasPersistence.value) {
-    watch(
-      tasks,
-      () => {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.value))
-      },
-      { deep: true },
-    )
 
     watch(focusedTaskId, () => {
       if (focusedTaskId.value) {
@@ -78,7 +78,7 @@ export const useTasks = () => {
       }
     })
 
-    hasPersistence.value = true
+    hasFocusPersistence.value = true
   }
 
   const focusedTask = computed(() => {
@@ -86,40 +86,57 @@ export const useTasks = () => {
     return tasks.value.find((task) => task.id === focusedTaskId.value) ?? null
   })
 
-  const addTask = async (payload: CreateTaskPayload) => {
+  const getTasks = async () => {
+    isLoading.value = true
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .select(TASK_SELECT)
+      .order('created_at', { ascending: false })
+
+    isLoading.value = false
+    if (error) {
+      console.error('getTasks:', error.message)
+      return
+    }
+
+    tasks.value = rowsToTaskItems(data ?? [])
+  }
+
+  const addTask = async (payload: CreateTaskDTO) => {
     const title = payload.title.trim()
     if (!title) return null
 
-    const task: TaskItem = {
-      id: createId(),
+    const values: Database['public']['Tables']['tasks']['Insert'] = {
       title,
-      description: payload.description?.trim() ?? '',
+      description: payload.description?.trim() ?? null,
       priority: payload.priority,
       deadline: normalizeDeadline(payload.deadline),
-      createdAt: new Date().toISOString(),
-      subtasks: [],
     }
 
-    tasks.value.unshift(task)
-    return task.id
-    // Етап створення задачі в базі даних
-    // const userId = user.value?.sub
-    // if (!userId) {
-    //   console.error('addTask: no authenticated user')
-    //   return
-    // }
+    if (payload.parentTaskId) {
+      values['parent_task_id'] = payload.parentTaskId
+    }
 
-    // const { data, error } = await supabase.from('tasks').insert({
-    //   user_id: userId,
-    //   title: payload.title,
-    //   description: payload.description ?? null,
-    //   priority: payload.priority,
-    //   deadline: payload.deadline ?? null,
-    // })
-    // console.log(data, error)
+    const { error } = await supabase.from('tasks').insert(values)
+
+    if (error) {
+      console.error('addTask:', error.message)
+      return null
+    }
+
+    await getTasks()
+    return tasks.value[0]?.id ?? null
   }
 
-  const removeTask = (taskId: string) => {
+  const removeTask = async (taskId: string) => {
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId)
+
+    if (error) {
+      console.error('removeTask:', error.message)
+      return
+    }
+
     tasks.value = tasks.value.filter((task) => task.id !== taskId)
     if (focusedTaskId.value === taskId) {
       focusedTaskId.value = null
@@ -138,24 +155,19 @@ export const useTasks = () => {
     task.deadline = normalizeDeadline(deadline)
   }
 
-  const addSubtask = (taskId: string, title: string) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    const normalizedTitle = title.trim()
-    if (!normalizedTitle) return
-    task.subtasks.push({
-      id: createId(),
-      title: normalizedTitle,
-      completed: false,
-    })
-  }
+  const toggleSubtask = async (subtaskId: string) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'completed',
+      })
+      .eq('id', subtaskId)
 
-  const toggleSubtask = (taskId: string, subtaskId: string) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    const subtask = task.subtasks.find((item) => item.id === subtaskId)
-    if (!subtask) return
-    subtask.completed = !subtask.completed
+    if (error) {
+      // TODO: toast error
+      console.error('toggleSubtask:', error.message)
+      return
+    }
   }
 
   const setFocusedTask = (taskId: string | null) => {
@@ -164,13 +176,14 @@ export const useTasks = () => {
 
   return {
     tasks,
+    isLoading,
     focusedTaskId,
     focusedTask,
+    getTasks,
     addTask,
     removeTask,
     setTaskPriority,
     setTaskDeadline,
-    addSubtask,
     toggleSubtask,
     setFocusedTask,
   }
