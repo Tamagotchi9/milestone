@@ -61,6 +61,18 @@ const timeLabel = computed(() => {
   return `${String(m).padStart(TIME_PAD, '0')}:${String(s).padStart(TIME_PAD, '0')}`
 })
 
+const phaseLabel = computed(
+  () => tabItems.find((item) => item.value === phase.value)?.label ?? 'Focus',
+)
+
+const runningTabTitle = computed(
+  () => `${timeLabel.value} · ${phaseLabel.value}`,
+)
+
+useHead(() => ({
+  title: isRunning.value ? runningTabTitle.value : undefined,
+}))
+
 const clearTick = () => {
   if (tick !== null) {
     clearInterval(tick)
