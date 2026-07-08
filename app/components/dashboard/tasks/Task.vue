@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { TaskItem, TaskPriority } from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
+import InputDateCalendar from '~/components/inputs/input-date-calendar.vue'
 
 const props = defineProps<{
   task: TaskItem
@@ -11,8 +12,8 @@ const emit = defineEmits<{
   remove: [taskId: string]
   setPriority: [taskId: string, priority: TaskPriority]
   setDeadline: [taskId: string, deadline: string | null]
-  addSubtask: [taskId: string, title: string]
-  toggleSubtask: [taskId: string, subtaskId: string]
+  addSubtask: [payload: CreateTaskDTO]
+  toggleSubtask: [subtaskId: string]
 }>()
 
 const priorityItems = [
@@ -30,15 +31,24 @@ const priorityBadgeColor = {
 const newSubtaskTitle = ref('')
 
 const addSubtaskToTask = () => {
-  emit('addSubtask', props.task.id, newSubtaskTitle.value)
+  emit('addSubtask', {
+    parentTaskId: props.task.id,
+    title: newSubtaskTitle.value,
+    priority: 'low',
+  })
   newSubtaskTitle.value = ''
 }
 
 const subtaskCompletion = computed(() => {
   if (props.task.subtasks.length === 0) return '0/0'
-  const completed = props.task.subtasks.filter((item) => item.completed).length
+  const completed = props.task.subtasks.filter((item) => item.status === 'completed').length
   return `${completed}/${props.task.subtasks.length}`
 })
+
+const { formatDateToDotted } = useDateFormat()
+const formattedDeadline = computed(() => formatDateToDotted(props.task.deadline))
+
+const showTaskEdit = computed(() => false)
 </script>
 
 <template>
@@ -68,7 +78,7 @@ const subtaskCompletion = computed(() => {
           <p class="text-xs text-muted">
             Deadline:
             <span class="text-highlighted">
-              {{ task.deadline || 'Not set' }}
+              {{ formattedDeadline }}
             </span>
             · Subtasks {{ subtaskCompletion }}
           </p>
@@ -96,7 +106,7 @@ const subtaskCompletion = computed(() => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div v-if="showTaskEdit" class="grid grid-cols-1 gap-3 md:grid-cols-2">
         <UFormField label="Priority">
           <USelect
             :model-value="task.priority"
@@ -113,13 +123,9 @@ const subtaskCompletion = computed(() => {
           />
         </UFormField>
         <UFormField label="Deadline">
-          <UInput
-            :model-value="task.deadline ?? ''"
-            type="date"
-            class="w-full"
-            @update:model-value="
-              (value) => emit('setDeadline', task.id, String(value || ''))
-            "
+          <InputDateCalendar
+            :model-value="task.deadline"
+            @update:model-value="(value) => emit('setDeadline', task.id, value)"
           />
         </UFormField>
       </div>
@@ -137,13 +143,13 @@ const subtaskCompletion = computed(() => {
           >
             <input
               type="checkbox"
-              :checked="subtask.completed"
+              :checked="subtask.status === 'completed'"
               class="size-4 rounded border-default"
-              @change="emit('toggleSubtask', task.id, subtask.id)"
+              @change="emit('toggleSubtask', subtask.id)"
             />
             <span
               :class="
-                subtask.completed ? 'line-through text-muted' : 'text-default'
+                subtask.status === 'completed' ? 'line-through text-muted' : 'text-default'
               "
             >
               {{ subtask.title }}

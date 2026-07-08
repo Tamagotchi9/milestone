@@ -9,11 +9,7 @@ export type TaskStatus =
   | 'blocked'
   | 'abandoned'
 
-export type TaskSubtask = {
-  id: string
-  title: string
-  completed: boolean
-}
+export type TaskSubtask = Pick<TaskItem, 'id' | 'title' | 'status'>
 
 export type TaskItem = {
   id: string
@@ -22,12 +18,14 @@ export type TaskItem = {
   priority: TaskPriority
   deadline: string | null
   createdAt: string
+  status: TaskStatus
   subtasks: TaskSubtask[]
 }
 
-export type CreateTaskPayload = {
+export type CreateTaskDTO = {
   title: string
   description?: string
-  priority: TaskPriority
+  priority?: TaskPriority
   deadline?: string | null
+  parentTaskId?: string | null
 }

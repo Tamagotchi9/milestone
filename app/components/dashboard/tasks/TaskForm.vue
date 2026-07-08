@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import type { CreateTaskPayload, TaskPriority } from '~/types/tasks.types'
+import type { CreateTaskDTO, TaskPriority } from '~/types/tasks.types'
+import InputDateCalendar from '~/components/inputs/input-date-calendar.vue'
+import { getLocalTimeZone, today } from '@internationalized/date'
 
 const emit = defineEmits<{
-  create: [payload: CreateTaskPayload]
+  create: [payload: CreateTaskDTO]
 }>()
 
 const priorityItems = [
@@ -18,6 +20,8 @@ const form = reactive({
   deadline: '',
 })
 
+const minDeadline = today(getLocalTimeZone())
+
 const createTask = () => {
   emit('create', {
     title: form.title,
@@ -30,6 +34,10 @@ const createTask = () => {
   form.description = ''
   form.priority = 'medium'
   form.deadline = ''
+}
+
+const handleDeadlineUpdate = (value: string | null) => {
+  form.deadline = value ?? ''
 }
 </script>
 
@@ -73,7 +81,11 @@ const createTask = () => {
         </UFormField>
 
         <UFormField label="Deadline" name="deadline">
-          <UInput v-model="form.deadline" type="date" class="w-full" />
+          <InputDateCalendar
+            :model-value="form.deadline"
+            :min-date="minDeadline"
+            @update:model-value="handleDeadlineUpdate"
+          />
         </UFormField>
       </div>
 
