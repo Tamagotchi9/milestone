@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
+
 const PHASE = {
   work: 'work',
   shortBreak: 'shortBreak',
@@ -31,9 +33,27 @@ const secondsLeft = ref(WORK_SEC)
 const isRunning = ref(false)
 const completedPomodoros = ref(0)
 const { focusedTask, setFocusedTask, getTasks } = useTasks()
+const {
+  currentSessionId,
+  stats,
+  startSession,
+  pauseSession,
+  resumeSession,
+  completeSession,
+  abandonSession,
+  fetchStats,
+} = usePomodoroSessions()
+
+const abandonActiveSession = () => {
+  if (currentSessionId.value) {
+    void abandonSession()
+  }
+}
 
 onMounted(() => {
   getTasks()
+  fetchStats(focusedTask.value?.id ?? null)
+  window.addEventListener('pagehide', abandonActiveSession)
 })
 
 /** Skip watch side-effects when phase changes from auto-cycle */
@@ -91,12 +111,14 @@ const maybeNotify = () => {
   new Notification('Pomidoro', { body })
 }
 
-const onPhaseComplete = () => {
+const onPhaseComplete = async () => {
   maybeNotify()
 
   suppressPhaseWatch.value = true
   try {
     if (phase.value === PHASE.work) {
+      await completeSession()
+      await fetchStats(focusedTask.value?.id ?? null)
       completedPomodoros.value++
       const next: Phase =
         completedPomodoros.value % POMODOROS_BEFORE_LONG_BREAK === 0
@@ -120,17 +142,31 @@ const startTick = () => {
     if (secondsLeft.value <= 0) return
     secondsLeft.value -= 1
     if (secondsLeft.value <= 0) {
-      onPhaseComplete()
+      void onPhaseComplete()
     }
   }, TICK_MS)
 }
 
-watch(phase, () => {
+watch(phase, (nextPhase, previousPhase) => {
   if (suppressPhaseWatch.value) return
+  if (
+    previousPhase === PHASE.work &&
+    nextPhase !== PHASE.work &&
+    currentSessionId.value
+  ) {
+    void abandonSession()
+  }
   secondsLeft.value = durationFor(phase.value)
   isRunning.value = false
   clearTick()
 })
+
+watch(
+  () => focusedTask.value?.id ?? null,
+  (taskId) => {
+    fetchStats(taskId)
+  },
+)
 
 const toggleRunning = () => {
   if (secondsLeft.value <= 0) {
@@ -138,13 +174,26 @@ const toggleRunning = () => {
   }
   isRunning.value = !isRunning.value
   if (isRunning.value) {
+    if (phase.value === PHASE.work) {
+      if (currentSessionId.value) {
+        void resumeSession()
+      } else {
+        void startSession(focusedTask.value?.id ?? null)
+      }
+    }
     startTick()
   } else {
     clearTick()
+    if (phase.value === PHASE.work && currentSessionId.value) {
+      void pauseSession()
+    }
   }
 }
 
 const resetSession = () => {
+  if (currentSessionId.value) {
+    void abandonSession()
+  }
   isRunning.value = false
   clearTick()
   suppressPhaseWatch.value = true
@@ -163,6 +212,8 @@ const clearFocusTask = () => {
 
 onBeforeUnmount(() => {
   clearTick()
+  window.removeEventListener('pagehide', abandonActiveSession)
+  abandonActiveSession()
 })
 </script>
 
@@ -174,7 +225,9 @@ onBeforeUnmount(() => {
         <p class="text-sm text-muted">25 / 5 / 15 classic Pomodoro</p>
         <p v-if="focusedTask" class="text-sm text-default">
           Focusing on:
-          <span class="font-medium text-highlighted">{{ focusedTask.title }}</span>
+          <span class="font-medium text-highlighted">{{
+            focusedTask.title
+          }}</span>
         </p>
       </div>
     </template>
@@ -191,9 +244,7 @@ onBeforeUnmount(() => {
       />
 
       <div class="flex justify-center">
-        <div
-          class="flex size-64 md:size-72 items-center justify-center"
-        >
+        <div class="flex size-64 md:size-72 items-center justify-center">
           <span
             class="font-mono text-5xl md:text-7xl font-semibold tabular-nums tracking-tight text-highlighted"
           >
@@ -231,12 +282,11 @@ onBeforeUnmount(() => {
         </UButton>
       </div>
 
-      <p class="text-center text-sm text-muted">
-        Completed pomodoros:
-        <span class="font-medium text-highlighted">{{
-          completedPomodoros
-        }}</span>
-      </p>
+      <PomodoroStatsSummary
+        :stats="stats"
+        :focused-task-title="focusedTask?.title ?? null"
+        compact
+      />
 
       <div v-if="focusedTask" class="text-center">
         <UButton
