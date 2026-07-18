@@ -45,9 +45,7 @@ const {
 } = usePomodoroSessions()
 
 const abandonActiveSession = () => {
-  if (currentSessionId.value) {
-    void abandonSession()
-  }
+  void abandonSession()
 }
 
 onMounted(() => {
@@ -151,10 +149,9 @@ watch(phase, (nextPhase, previousPhase) => {
   if (suppressPhaseWatch.value) return
   if (
     previousPhase === PHASE.work &&
-    nextPhase !== PHASE.work &&
-    currentSessionId.value
+    nextPhase !== PHASE.work
   ) {
-    void abandonSession()
+    abandonActiveSession()
   }
   secondsLeft.value = durationFor(phase.value)
   isRunning.value = false
@@ -191,9 +188,7 @@ const toggleRunning = () => {
 }
 
 const resetSession = () => {
-  if (currentSessionId.value) {
-    void abandonSession()
-  }
+  abandonActiveSession()
   isRunning.value = false
   clearTick()
   suppressPhaseWatch.value = true
