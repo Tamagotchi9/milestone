@@ -20,14 +20,14 @@ const displayName = computed(() => {
 
 onMounted(async () => {
   await getTasks()
-  await fetchStats(focusedTask.value?.id ?? null)
 })
 
 watch(
   () => focusedTask.value?.id ?? null,
   (taskId) => {
-    fetchStats(taskId)
+    void fetchStats(taskId)
   },
+  { immediate: true },
 )
 </script>
 

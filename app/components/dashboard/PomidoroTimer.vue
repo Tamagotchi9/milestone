@@ -50,7 +50,6 @@ const abandonActiveSession = () => {
 
 onMounted(() => {
   getTasks()
-  fetchStats(focusedTask.value?.id ?? null)
   window.addEventListener('pagehide', abandonActiveSession)
 })
 
@@ -161,8 +160,9 @@ watch(phase, (nextPhase, previousPhase) => {
 watch(
   () => focusedTask.value?.id ?? null,
   (taskId) => {
-    fetchStats(taskId)
+    void fetchStats(taskId)
   },
+  { immediate: true },
 )
 
 const toggleRunning = () => {
