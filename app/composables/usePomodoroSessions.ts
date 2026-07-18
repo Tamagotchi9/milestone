@@ -119,27 +119,39 @@ export const usePomodoroSessions = () => {
   }
 
   const pauseSession = async () => {
+    if (terminalPromise || closingReason) return
     if (!currentSessionId.value) return
+    const sessionId = currentSessionId.value
     const actual = flushElapsed()
+    if (terminalPromise || closingReason) return
 
     const { error } = await supabase
       .from('pomodoro_sessions')
       .update({ status: 'paused', actual_seconds: actual })
-      .eq('id', currentSessionId.value)
+      .eq('id', sessionId)
+      .eq('status', 'running')
 
     if (error) console.error('pauseSession:', error.message)
   }
 
   const resumeSession = async () => {
+    if (terminalPromise || closingReason) return
     if (!currentSessionId.value) return
-    runningSinceMs.value = Date.now()
+    const sessionId = currentSessionId.value
 
     const { error } = await supabase
       .from('pomodoro_sessions')
       .update({ status: 'running' })
-      .eq('id', currentSessionId.value)
+      .eq('id', sessionId)
+      .eq('status', 'paused')
 
-    if (error) console.error('resumeSession:', error.message)
+    if (error) {
+      console.error('resumeSession:', error.message)
+      return
+    }
+    if (terminalPromise || closingReason) return
+
+    runningSinceMs.value = Date.now()
   }
 
   const endSession = (reason: ClosingReason): Promise<void> => {
