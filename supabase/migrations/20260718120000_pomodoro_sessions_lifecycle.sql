@@ -142,7 +142,6 @@ returns table (
   seconds_for_task bigint
 )
 language plpgsql
-stable
 security invoker
 set search_path = public
 as $$
@@ -170,20 +169,28 @@ begin
   return query
   select
     count(*) filter (
-      where s.was_completed and s.started_at >= day_start
+      where s.was_completed
+        and s.started_at >= day_start
+        and s.started_at < day_start + interval '1 day'
     )::bigint as completed_today,
     coalesce(
       sum(s.actual_seconds) filter (
-        where s.was_completed and s.started_at >= day_start
+        where s.was_completed
+          and s.started_at >= day_start
+          and s.started_at < day_start + interval '1 day'
       ),
       0
     )::bigint as seconds_today,
     count(*) filter (
-      where s.was_completed and s.started_at >= week_start
+      where s.was_completed
+        and s.started_at >= week_start
+        and s.started_at < week_start + interval '1 week'
     )::bigint as completed_week,
     coalesce(
       sum(s.actual_seconds) filter (
-        where s.was_completed and s.started_at >= week_start
+        where s.was_completed
+          and s.started_at >= week_start
+          and s.started_at < week_start + interval '1 week'
       ),
       0
     )::bigint as seconds_week,
@@ -192,6 +199,7 @@ begin
         and p_task_id is not null
         and s.task_id = p_task_id
         and s.started_at >= week_start
+        and s.started_at < week_start + interval '1 week'
     )::bigint as completed_for_task,
     coalesce(
       sum(s.actual_seconds) filter (
@@ -199,6 +207,7 @@ begin
           and p_task_id is not null
           and s.task_id = p_task_id
           and s.started_at >= week_start
+          and s.started_at < week_start + interval '1 week'
       ),
       0
     )::bigint as seconds_for_task
