@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
+
 definePageMeta({ layout: 'dashboard' })
 
 const currentUserStore = useCurrentUserStore()
+const { focusedTask, getTasks } = useTasks()
+const { stats, fetchStats, isStatsLoading, statsError } = usePomodoroSessions()
 
 const displayName = computed(() => {
   const meta = currentUserStore.user?.user_metadata as
@@ -13,10 +17,22 @@ const displayName = computed(() => {
   if (email) return email.split('@')[0] ?? email
   return 'there'
 })
+
+onMounted(async () => {
+  await getTasks()
+})
+
+watch(
+  () => focusedTask.value?.id ?? null,
+  (taskId) => {
+    void fetchStats(taskId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
-  <div class="p-6 md:p-10 max-w-3xl">
+  <div class="p-6 md:p-10 max-w-3xl space-y-4">
     <UCard>
       <template #header>
         <div class="space-y-1">
@@ -46,6 +62,21 @@ const displayName = computed(() => {
         </NuxtLink>
         for a focused work session.
       </p>
+    </UCard>
+
+    <UCard>
+      <template #header>
+        <h2 class="text-lg font-semibold text-highlighted">Focus stats</h2>
+      </template>
+      <p v-if="isStatsLoading" class="text-sm text-muted">Loading stats…</p>
+      <p v-else-if="statsError" class="text-sm text-muted">
+        Couldn’t load stats.
+      </p>
+      <PomodoroStatsSummary
+        v-else
+        :stats="stats"
+        :focused-task-title="focusedTask?.title ?? null"
+      />
     </UCard>
   </div>
 </template>

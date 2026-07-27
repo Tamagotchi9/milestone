@@ -19,7 +19,7 @@ export type Database = {
           duration_minutes: number
           id: string
           started_at: string
-          status: string
+          status: Database['public']['Enums']['pomodoro_session_status']
           task_id: string | null
           user_id: string
           was_completed: boolean
@@ -30,9 +30,9 @@ export type Database = {
           duration_minutes?: number
           id?: string
           started_at?: string
-          status?: string
+          status?: Database['public']['Enums']['pomodoro_session_status']
           task_id?: string | null
-          user_id: string
+          user_id?: string
           was_completed?: boolean
         }
         Update: {
@@ -41,7 +41,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           started_at?: string
-          status?: string
+          status?: Database['public']['Enums']['pomodoro_session_status']
           task_id?: string | null
           user_id?: string
           was_completed?: boolean
@@ -108,9 +108,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      pomodoro_stats: {
+        Args: { p_task_id?: string | null }
+        Returns: {
+          completed_today: number
+          seconds_today: number
+          completed_week: number
+          seconds_week: number
+          completed_for_task: number
+          seconds_for_task: number
+        }[]
+      }
     }
     Enums: {
+      pomodoro_session_status:
+        | 'running'
+        | 'paused'
+        | 'completed'
+        | 'abandoned'
       tasks_priority: 'low' | 'medium' | 'high'
       tasks_status:
         | 'created'
