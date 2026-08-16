@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HabitsPanel from '~/components/dashboard/habits/HabitsPanel.vue'
 import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
 
 definePageMeta({ layout: 'dashboard' })
@@ -32,7 +33,7 @@ watch(
 </script>
 
 <template>
-  <div class="p-6 md:p-10 max-w-3xl space-y-4">
+  <div class="max-w-6xl space-y-4 p-6 md:p-10">
     <UCard>
       <template #header>
         <div class="space-y-1">
@@ -63,6 +64,8 @@ watch(
         for a focused work session.
       </p>
     </UCard>
+
+    <HabitsPanel />
 
     <UCard>
       <template #header>
