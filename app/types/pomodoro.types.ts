@@ -5,6 +5,8 @@ export type PomodoroSessionStatus =
   | 'completed'
   | 'abandoned'
 
+export type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak'
+
 export type PomodoroStats = {
   completedToday: number
   secondsToday: number
