@@ -1,4 +1,9 @@
 import type { PomodoroPhase } from '~/types/pomodoro.types'
+import {
+  disposePomodoroSounds,
+  playPomodoroSound,
+  POMODORO_SOUND,
+} from '~/utils/pomodoroSounds'
 
 export const POMODORO_PHASE = {
   work: 'work',
@@ -139,6 +144,7 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
     const completedPhase = phase.value
     deadlineMs.value = null
     secondsRemaining.value = 0
+    playPomodoroSound(POMODORO_SOUND.complete)
 
     try {
       if (completedPhase === POMODORO_PHASE.work) {
@@ -158,9 +164,11 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
         activeTaskId.value = null
         activeTaskTitle.value = null
         isFocusTaskCaptured.value = false
+        playPomodoroSound(POMODORO_SOUND.break)
       } else {
         phase.value = POMODORO_PHASE.work
         captureFocusedTask()
+        playPomodoroSound(POMODORO_SOUND.focus)
       }
 
       secondsRemaining.value = durationFor(phase.value)
@@ -178,7 +186,7 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
     if (!isRunning.value || isCompleting.value) return
     syncRemainingToDeadline()
     if (secondsRemaining.value === 0) {
-      void completeCurrentPhase()
+      completeCurrentPhase()
     }
   }
 
@@ -204,6 +212,7 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
 
       isRunning.value = true
       beginDeadline()
+      playPomodoroSound(POMODORO_SOUND.start)
 
       if (phase.value !== POMODORO_PHASE.work) return
 
@@ -311,12 +320,12 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
     deadlineMs.value = null
 
     const pendingShutdown = (async () => {
-      await abandonSession()
+      await Promise.all([abandonSession(), disposePomodoroSounds()])
       resetLocalRuntime()
     })()
 
     shutdownPromise = pendingShutdown
-    void pendingShutdown.finally(() => {
+    pendingShutdown.finally(() => {
       if (shutdownPromise === pendingShutdown) {
         shutdownPromise = null
       }
@@ -325,7 +334,7 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
   }
 
   const handlePageHide = () => {
-    void shutdown()
+    shutdown()
   }
 
   const initialize = async () => {
@@ -340,7 +349,7 @@ export const usePomodoroRuntimeStore = defineStore('pomodoroRuntime', () => {
     stopStatsWatch = watch(
       () => focusedTask.value?.id ?? null,
       (taskId) => {
-        void fetchStats(taskId)
+        fetchStats(taskId)
       },
       { immediate: true },
     )
