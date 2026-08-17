@@ -116,8 +116,9 @@ export const usePomodoroSessions = () => {
 
   const pauseSession = async () => {
     if (terminalPromise || closingReason) return
-    if (!currentSessionId.value) return
-    const sessionId = currentSessionId.value
+    const pendingId = startPromise ? await startPromise : null
+    const sessionId = currentSessionId.value ?? pendingId
+    if (!sessionId) return
     const actual = flushElapsed()
     if (terminalPromise || closingReason) return
 

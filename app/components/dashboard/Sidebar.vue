@@ -3,6 +3,7 @@ const route = useRoute()
 const supabase = useSupabaseClient()
 const router = useRouter()
 const currentUserStore = useCurrentUserStore()
+const pomodoroRuntimeStore = usePomodoroRuntimeStore()
 
 const userEmail = computed(() => currentUserStore.user?.email ?? 'Account')
 
@@ -34,6 +35,7 @@ const isNavActive = (item: (typeof nav)[number]) => {
 }
 
 const signOut = async () => {
+  await pomodoroRuntimeStore.shutdown()
   await supabase.auth.signOut()
   currentUserStore.clearAuthState()
   await router.push('/auth/login')
@@ -68,9 +70,7 @@ const signOut = async () => {
         :key="item.to"
         :to="item.to"
         class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-elevated hover:text-highlighted transition-colors"
-        :class="
-          isNavActive(item) ? '!bg-primary/10 !text-primary' : undefined
-        "
+        :class="isNavActive(item) ? '!bg-primary/10 !text-primary' : undefined"
       >
         <UIcon :name="item.icon" class="size-5 shrink-0" />
         {{ item.label }}
