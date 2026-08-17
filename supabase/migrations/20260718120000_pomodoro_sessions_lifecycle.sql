@@ -30,6 +30,16 @@ create table if not exists public.pomodoro_sessions (
   was_completed boolean not null default false
 );
 
+-- Replace legacy text-based checks before converting status to an enum.
+alter table public.pomodoro_sessions
+  drop constraint if exists pomodoro_sessions_status_check,
+  drop constraint if exists pomodoro_sessions_completion_consistency_check,
+  drop constraint if exists pomodoro_sessions_legacy_completed_sync_check,
+  drop constraint if exists pomodoro_sessions_actual_seconds_check;
+
+drop index if exists public.pomodoro_sessions_user_completed_at_idx;
+drop index if exists public.pomodoro_sessions_user_running_idx;
+
 -- Convert status text → enum when still text
 do $$
 begin
@@ -41,22 +51,48 @@ begin
       and column_name = 'status'
       and data_type = 'text'
   ) then
-    update public.pomodoro_sessions
-    set status = 'running'
-    where status is null
-       or status not in ('running', 'paused', 'completed', 'abandoned');
+    -- Parse these statements only when status is still text. A static UPDATE is
+    -- planned against the current column type even when this branch is skipped.
+    execute $sql$
+      update public.pomodoro_sessions
+      set status = 'running'
+      where status is null
+         or status::text not in ('running', 'paused', 'completed', 'abandoned')
+    $sql$;
 
-    alter table public.pomodoro_sessions
-      alter column status drop default;
+    execute 'alter table public.pomodoro_sessions alter column status drop default';
 
-    alter table public.pomodoro_sessions
-      alter column status type public.pomodoro_session_status
-      using status::public.pomodoro_session_status;
+    execute $sql$
+      alter table public.pomodoro_sessions
+        alter column status type public.pomodoro_session_status
+        using status::public.pomodoro_session_status
+    $sql$;
 
-    alter table public.pomodoro_sessions
-      alter column status set default 'running'::public.pomodoro_session_status;
+    execute $sql$
+      alter table public.pomodoro_sessions
+        alter column status set default 'running'::public.pomodoro_session_status
+    $sql$;
   end if;
 end $$;
+
+alter table public.pomodoro_sessions
+  add constraint pomodoro_sessions_actual_seconds_check
+    check (actual_seconds is null or actual_seconds >= 0),
+  add constraint pomodoro_sessions_completion_consistency_check
+    check (
+      (status in ('completed', 'abandoned') and completed_at is not null)
+      or (status in ('running', 'paused') and completed_at is null)
+    ),
+  add constraint pomodoro_sessions_legacy_completed_sync_check
+    check (was_completed = (status = 'completed'));
+
+create index pomodoro_sessions_user_completed_at_idx
+  on public.pomodoro_sessions (user_id, completed_at desc)
+  where status = 'completed';
+
+create index pomodoro_sessions_user_running_idx
+  on public.pomodoro_sessions (user_id)
+  where status = 'running';
 
 alter table public.pomodoro_sessions
   alter column user_id set default auth.uid();

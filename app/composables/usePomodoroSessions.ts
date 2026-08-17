@@ -3,15 +3,10 @@ import {
   EMPTY_POMODORO_STATS,
   type PomodoroStats,
 } from '~/types/pomodoro.types'
+import { toFiniteNumber } from '~/utils/toFiniteNumber'
 
 const DEFAULT_DURATION_MINUTES = 25
 type ClosingReason = 'complete' | 'abandon'
-
-const toNumber = (value: number | string | null | undefined): number => {
-  if (value == null) return 0
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : 0
-}
 
 const mapStatsRow = (row: {
   completed_today: number | string
@@ -21,12 +16,12 @@ const mapStatsRow = (row: {
   completed_for_task: number | string
   seconds_for_task: number | string
 }): PomodoroStats => ({
-  completedToday: toNumber(row.completed_today),
-  secondsToday: toNumber(row.seconds_today),
-  completedWeek: toNumber(row.completed_week),
-  secondsWeek: toNumber(row.seconds_week),
-  completedForTask: toNumber(row.completed_for_task),
-  secondsForTask: toNumber(row.seconds_for_task),
+  completedToday: toFiniteNumber(row.completed_today),
+  secondsToday: toFiniteNumber(row.seconds_today),
+  completedWeek: toFiniteNumber(row.completed_week),
+  secondsWeek: toFiniteNumber(row.seconds_week),
+  completedForTask: toFiniteNumber(row.completed_for_task),
+  secondsForTask: toFiniteNumber(row.seconds_for_task),
 })
 
 export const usePomodoroSessions = () => {
@@ -39,10 +34,9 @@ export const usePomodoroSessions = () => {
     'pomodoro.currentSessionId',
     () => null,
   )
-  const stats = useState<PomodoroStats>(
-    'pomodoro.stats',
-    () => ({ ...EMPTY_POMODORO_STATS }),
-  )
+  const stats = useState<PomodoroStats>('pomodoro.stats', () => ({
+    ...EMPTY_POMODORO_STATS,
+  }))
   const statsError = useState<string | null>('pomodoro.statsError', () => null)
   const isStatsLoading = useState<boolean>('pomodoro.statsLoading', () => false)
 
@@ -77,7 +71,9 @@ export const usePomodoroSessions = () => {
     resetTiming()
   }
 
-  const startSession = async (taskId: string | null): Promise<string | null> => {
+  const startSession = async (
+    taskId: string | null,
+  ): Promise<string | null> => {
     if (terminalPromise) await terminalPromise
     if (currentSessionId.value) return currentSessionId.value
     if (startPromise) return startPromise
