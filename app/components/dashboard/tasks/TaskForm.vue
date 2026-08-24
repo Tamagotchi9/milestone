@@ -7,6 +7,15 @@ const emit = defineEmits<{
   create: [payload: CreateTaskDTO]
 }>()
 
+withDefaults(
+  defineProps<{
+    loading?: boolean
+  }>(),
+  {
+    loading: false,
+  },
+)
+
 const priorityItems = [
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
@@ -29,11 +38,6 @@ const createTask = () => {
     priority: form.priority,
     deadline: form.deadline || null,
   })
-
-  form.title = ''
-  form.description = ''
-  form.priority = 'medium'
-  form.deadline = ''
 }
 
 const handleDeadlineUpdate = (value: string | null) => {
@@ -42,56 +46,53 @@ const handleDeadlineUpdate = (value: string | null) => {
 </script>
 
 <template>
-  <UCard>
-    <template #header>
-      <div class="space-y-1">
-        <h1 class="text-2xl font-semibold text-highlighted">Tasks</h1>
-        <p class="text-sm text-muted">
-          Create tasks, set priorities and deadlines, split into subtasks, then
-          start focus in Pomidoro.
-        </p>
-      </div>
-    </template>
+  <UForm :state="form" class="space-y-4" @submit.prevent="createTask">
+    <UFormField label="Task title" name="title" required>
+      <UInput
+        v-model="form.title"
+        autofocus
+        placeholder="Finish landing page copy"
+        class="w-full"
+      />
+    </UFormField>
 
-    <UForm :state="form" class="space-y-4" @submit.prevent="createTask">
-      <UFormField label="Task title" name="title" required>
-        <UInput
-          v-model="form.title"
-          placeholder="Finish landing page copy"
+    <UFormField label="Description" name="description">
+      <UTextarea
+        v-model="form.description"
+        :rows="3"
+        placeholder="Optional context about this task"
+        class="w-full"
+      />
+    </UFormField>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <UFormField label="Priority" name="priority">
+        <USelect
+          v-model="form.priority"
+          :items="priorityItems"
           class="w-full"
         />
       </UFormField>
 
-      <UFormField label="Description" name="description">
-        <UTextarea
-          v-model="form.description"
-          :rows="3"
-          placeholder="Optional context about this task"
-          class="w-full"
+      <UFormField label="Due date" name="deadline">
+        <InputDateCalendar
+          :model-value="form.deadline"
+          :min-date="minDeadline"
+          @update:model-value="handleDeadlineUpdate"
         />
       </UFormField>
+    </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <UFormField label="Priority" name="priority">
-          <USelect
-            v-model="form.priority"
-            :items="priorityItems"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="Deadline" name="deadline">
-          <InputDateCalendar
-            :model-value="form.deadline"
-            :min-date="minDeadline"
-            @update:model-value="handleDeadlineUpdate"
-          />
-        </UFormField>
-      </div>
-
-      <UButton type="submit" color="primary" icon="i-lucide-plus">
+    <div class="flex justify-end">
+      <UButton
+        type="submit"
+        color="primary"
+        icon="i-lucide-plus"
+        :loading="loading"
+        :disabled="!form.title.trim()"
+      >
         Create task
       </UButton>
-    </UForm>
-  </UCard>
+    </div>
+  </UForm>
 </template>
