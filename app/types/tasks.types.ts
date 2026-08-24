@@ -1,5 +1,7 @@
 export type TaskPriority = 'low' | 'medium' | 'high'
 
+export type TaskSort = 'deadline' | 'priority'
+
 /** Matches `public.tasks_status` in Postgres */
 export type TaskStatus =
   | 'created'

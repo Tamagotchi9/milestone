@@ -22,6 +22,12 @@ const normalizeDeadline = (deadline?: string | null): string | null => {
   return deadline
 }
 
+const mapTaskRowToSubtask = (row: TaskRow) => ({
+  id: row.id,
+  title: row.title,
+  status: row.status,
+})
+
 const mapTaskRowToItem = (row: TaskRow, subtaskRows: TaskRow[]): TaskItem => ({
   id: row.id,
   title: row.title,
@@ -30,11 +36,7 @@ const mapTaskRowToItem = (row: TaskRow, subtaskRows: TaskRow[]): TaskItem => ({
   deadline: row.deadline,
   createdAt: row.created_at ?? new Date().toISOString(),
   status: row.status,
-  subtasks: subtaskRows.map((subtask) => ({
-    id: subtask.id,
-    title: subtask.title,
-    status: subtask.status,
-  })),
+  subtasks: subtaskRows.map(mapTaskRowToSubtask),
 })
 
 const rowsToTaskItems = (rows: TaskRow[]): TaskItem[] => {
@@ -118,15 +120,34 @@ export const useTasks = () => {
       values['parent_task_id'] = payload.parentTaskId
     }
 
-    const { error } = await supabase.from('tasks').insert(values)
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert(values)
+      .select(TASK_SELECT)
+      .single()
 
     if (error) {
       console.error('addTask:', error.message)
       return null
     }
 
-    await getTasks()
-    return tasks.value[0]?.id ?? null
+    if (data.parent_task_id) {
+      tasks.value = tasks.value.map((task) =>
+        task.id === data.parent_task_id
+          ? {
+              ...task,
+              subtasks: [...task.subtasks, mapTaskRowToSubtask(data)],
+            }
+          : task,
+      )
+    } else {
+      tasks.value = [
+        mapTaskRowToItem(data, []),
+        ...tasks.value.filter((task) => task.id !== data.id),
+      ]
+    }
+
+    return data
   }
 
   const removeTask = async (taskId: string) => {

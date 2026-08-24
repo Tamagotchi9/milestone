@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
-import InputDateCalendar from '~/components/inputs/input-date-calendar.vue'
+import type { CreateTaskDTO, TaskItem, TaskStatus } from '~/types/tasks.types'
 
 const props = defineProps<{
   task: TaskItem
@@ -10,23 +9,33 @@ const props = defineProps<{
 const emit = defineEmits<{
   focus: [taskId: string]
   remove: [taskId: string]
-  setPriority: [taskId: string, priority: TaskPriority]
-  setDeadline: [taskId: string, deadline: string | null]
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
 }>()
-
-const priorityItems = [
-  { label: 'Low', value: 'low' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' },
-]
 
 const priorityBadgeColor = {
   high: 'error',
   medium: 'warning',
   low: 'success',
 } as const
+
+const statusBadgeColor = {
+  created: 'neutral',
+  in_progress: 'primary',
+  completed: 'success',
+  on_hold: 'warning',
+  blocked: 'error',
+  abandoned: 'neutral',
+} as const
+
+const statusLabel: Record<TaskStatus, string> = {
+  created: 'Created',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  on_hold: 'On hold',
+  blocked: 'Blocked',
+  abandoned: 'Abandoned',
+}
 
 const newSubtaskTitle = ref('')
 
@@ -41,50 +50,70 @@ const addSubtaskToTask = () => {
 
 const subtaskCompletion = computed(() => {
   if (props.task.subtasks.length === 0) return '0/0'
-  const completed = props.task.subtasks.filter((item) => item.status === 'completed').length
+  const completed = props.task.subtasks.filter(
+    (item) => item.status === 'completed',
+  ).length
   return `${completed}/${props.task.subtasks.length}`
 })
 
 const { formatDateToDotted } = useDateFormat()
-const formattedDeadline = computed(() => formatDateToDotted(props.task.deadline))
-
-const showTaskEdit = computed(() => false)
+const formattedDeadline = computed(() =>
+  formatDateToDotted(props.task.deadline),
+)
 </script>
 
 <template>
-  <UCard>
-    <div class="space-y-4">
+  <UCard class="transition-shadow duration-200 hover:shadow-md">
+    <article class="space-y-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2">
-            <h2 class="text-lg font-semibold text-highlighted">
+        <div class="min-w-0 flex-1 space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 class="text-base font-semibold text-highlighted">
               {{ task.title }}
-            </h2>
-            <UBadge :color="priorityBadgeColor[task.priority]" variant="soft">
-              {{ task.priority }}
+            </h3>
+            <UBadge
+              :color="priorityBadgeColor[task.priority]"
+              variant="subtle"
+              size="sm"
+              class="capitalize"
+            >
+              {{ task.priority }} priority
+            </UBadge>
+            <UBadge
+              :color="statusBadgeColor[task.status]"
+              variant="soft"
+              size="sm"
+            >
+              {{ statusLabel[task.status] }}
             </UBadge>
             <UBadge
               v-if="focusedTaskId === task.id"
               color="primary"
               variant="soft"
+              size="sm"
               icon="i-lucide-focus"
             >
               Focusing
             </UBadge>
           </div>
-          <p v-if="task.description" class="text-sm text-muted">
+          <p v-if="task.description" class="text-sm leading-5 text-muted">
             {{ task.description }}
           </p>
-          <p class="text-xs text-muted">
-            Deadline:
-            <span class="text-highlighted">
+          <div
+            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted"
+          >
+            <span class="inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-calendar" class="size-3.5" />
               {{ formattedDeadline }}
             </span>
-            · Subtasks {{ subtaskCompletion }}
-          </p>
+            <span class="inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-list-checks" class="size-3.5" />
+              {{ subtaskCompletion }} subtasks
+            </span>
+          </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="flex shrink-0 flex-wrap gap-2">
           <UButton
             size="sm"
             color="primary"
@@ -106,40 +135,12 @@ const showTaskEdit = computed(() => false)
         </div>
       </div>
 
-      <div v-if="showTaskEdit" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <UFormField label="Priority">
-          <USelect
-            :model-value="task.priority"
-            :items="priorityItems"
-            class="w-full"
-            @update:model-value="
-              (value) =>
-                emit(
-                  'setPriority',
-                  task.id,
-                  (value as TaskPriority) ?? 'medium',
-                )
-            "
-          />
-        </UFormField>
-        <UFormField label="Deadline">
-          <InputDateCalendar
-            :model-value="task.deadline"
-            @update:model-value="(value) => emit('setDeadline', task.id, value)"
-          />
-        </UFormField>
-      </div>
-
-      <div class="space-y-2">
-        <p class="text-sm font-medium">Subtasks</p>
-        <div v-if="task.subtasks.length === 0" class="text-sm text-muted">
-          No subtasks yet.
-        </div>
-        <div v-else class="space-y-2">
+      <div class="space-y-3 border-t border-default pt-4">
+        <div v-if="task.subtasks.length > 0" class="space-y-2">
           <label
             v-for="subtask in task.subtasks"
             :key="subtask.id"
-            class="flex items-center gap-2 text-sm"
+            class="flex items-center gap-2.5 text-sm"
           >
             <input
               type="checkbox"
@@ -149,7 +150,9 @@ const showTaskEdit = computed(() => false)
             />
             <span
               :class="
-                subtask.status === 'completed' ? 'line-through text-muted' : 'text-default'
+                subtask.status === 'completed'
+                  ? 'line-through text-muted'
+                  : 'text-default'
               "
             >
               {{ subtask.title }}
@@ -157,22 +160,26 @@ const showTaskEdit = computed(() => false)
           </label>
         </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <form
+          class="flex flex-col gap-2 sm:flex-row"
+          @submit.prevent="addSubtaskToTask"
+        >
           <UInput
             v-model="newSubtaskTitle"
             placeholder="Add a subtask"
             class="flex-1"
           />
           <UButton
+            type="submit"
             color="neutral"
             variant="soft"
             icon="i-lucide-list-plus"
-            @click="addSubtaskToTask"
+            :disabled="!newSubtaskTitle.trim()"
           >
             Add subtask
           </UButton>
-        </div>
+        </form>
       </div>
-    </div>
+    </article>
   </UCard>
 </template>
