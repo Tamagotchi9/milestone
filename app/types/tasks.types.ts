@@ -3,13 +3,16 @@ export type TaskPriority = 'low' | 'medium' | 'high'
 export type TaskSort = 'deadline' | 'priority'
 
 /** Matches `public.tasks_status` in Postgres */
-export type TaskStatus =
-  | 'created'
-  | 'in_progress'
-  | 'completed'
-  | 'on_hold'
-  | 'blocked'
-  | 'abandoned'
+export const TASK_STATUS = {
+  CREATED: 'created',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  ON_HOLD: 'on_hold',
+  BLOCKED: 'blocked',
+  ABANDONED: 'abandoned',
+} as const
+
+export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS]
 
 export type TaskSubtask = Pick<TaskItem, 'id' | 'title' | 'status'>
 

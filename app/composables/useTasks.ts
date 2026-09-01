@@ -1,5 +1,10 @@
 import type { Database } from '~/types/database.types'
-import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
+import {
+  TASK_STATUS,
+  type CreateTaskDTO,
+  type TaskItem,
+  type TaskPriority,
+} from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
 const TASK_SELECT =
@@ -177,14 +182,29 @@ export const useTasks = () => {
   }
 
   const toggleSubtask = async (subtaskId: string) => {
+    const subtask = tasks.value
+      .flatMap((task) => task.subtasks)
+      .find((item) => item.id === subtaskId)
+    if (!subtask) return
+
+    const previousStatus = subtask.status
+    const nextStatus =
+      previousStatus === TASK_STATUS.COMPLETED
+        ? TASK_STATUS.CREATED
+        : TASK_STATUS.COMPLETED
+    subtask.status = nextStatus
+
     const { error } = await supabase
       .from('tasks')
       .update({
-        status: 'completed',
+        status: nextStatus,
       })
       .eq('id', subtaskId)
+      .select(TASK_SELECT)
+      .single()
 
     if (error) {
+      subtask.status = previousStatus
       // TODO: toast error
       console.error('toggleSubtask:', error.message)
       return
