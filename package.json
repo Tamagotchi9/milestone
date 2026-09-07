@@ -8,6 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -27,14 +29,19 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@nuxt/test-utils": "^4.2.0",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/node": "^25.6.0",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.9.0",
+    "happy-dom": "^20.12.0",
     "prettier": "^3.8.3",
     "typescript-eslint": "^8.59.1",
+    "vitest": "^4.1.11",
     "vue-eslint-parser": "^10.4.0"
   }
 }

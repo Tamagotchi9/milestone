@@ -3,7 +3,6 @@ import {
   TASK_STATUS,
   type CreateTaskDTO,
   type TaskItem,
-  type TaskPriority,
 } from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
@@ -169,18 +168,6 @@ export const useTasks = () => {
     }
   }
 
-  const setTaskPriority = (taskId: string, priority: TaskPriority) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    task.priority = priority
-  }
-
-  const setTaskDeadline = (taskId: string, deadline: string | null) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    task.deadline = normalizeDeadline(deadline)
-  }
-
   const toggleSubtask = async (subtaskId: string) => {
     const subtask = tasks.value
       .flatMap((task) => task.subtasks)
@@ -223,8 +210,6 @@ export const useTasks = () => {
     getTasks,
     addTask,
     removeTask,
-    setTaskPriority,
-    setTaskDeadline,
     toggleSubtask,
     setFocusedTask,
   }
