@@ -3,6 +3,7 @@ import {
   TASK_STATUS,
   type CreateTaskDTO,
   type TaskItem,
+  type TaskStatus,
 } from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
@@ -60,7 +61,12 @@ const rowsToTaskItems = (rows: TaskRow[]): TaskItem[] => {
 
 export const useTasks = () => {
   const supabase = useSupabaseClient<Database>()
+  const toast = useToast()
   const tasks = useState<TaskItem[]>('tasks.items', () => [])
+  const updatingStatusIds = useState<string[]>(
+    'tasks.updatingStatusIds',
+    () => [],
+  )
   const focusedTaskId = useState<string | null>(
     'tasks.focusedTaskId',
     () => null,
@@ -198,6 +204,41 @@ export const useTasks = () => {
     }
   }
 
+  const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
+    const task = tasks.value.find((item) => item.id === taskId)
+    if (!task || updatingStatusIds.value.includes(taskId)) return false
+    if (task.status === status) return true
+
+    const previousStatus = task.status
+    task.status = status
+    updatingStatusIds.value.push(taskId)
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status })
+        .eq('id', taskId)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      return true
+    } catch {
+      const currentTask = tasks.value.find((item) => item.id === taskId)
+      if (currentTask) currentTask.status = previousStatus
+      toast.add({
+        title: 'Unable to update task status',
+        description: 'The previous status has been restored. Please try again.',
+        color: 'error',
+      })
+      return false
+    } finally {
+      updatingStatusIds.value = updatingStatusIds.value.filter(
+        (id) => id !== taskId,
+      )
+    }
+  }
+
   const setFocusedTask = (taskId: string | null) => {
     focusedTaskId.value = taskId
   }
@@ -205,12 +246,14 @@ export const useTasks = () => {
   return {
     tasks,
     isLoading,
+    updatingStatusIds,
     focusedTaskId,
     focusedTask,
     getTasks,
     addTask,
     removeTask,
     toggleSubtask,
+    updateTaskStatus,
     setFocusedTask,
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard' })
 
-import type { CreateTaskDTO } from '~/types/tasks.types'
+import { TASK_STATUS, type CreateTaskDTO } from '~/types/tasks.types'
 import AppDialog from '~/components/dialogs/AppDialog.vue'
 import TaskForm from '~/components/dashboard/tasks/TaskForm.vue'
 import TaskList from '~/components/dashboard/tasks/TaskList.vue'
@@ -11,6 +11,8 @@ const router = useRouter()
 const {
   tasks,
   isLoading,
+  updatingStatusIds,
+  updateTaskStatus,
   getTasks,
   addTask,
   removeTask,
@@ -41,6 +43,8 @@ const createSubtask = async (payload: CreateTaskDTO) => {
 }
 
 const startFocus = async (taskId: string) => {
+  const updated = await updateTaskStatus(taskId, TASK_STATUS.IN_PROGRESS)
+  if (!updated) return
   setFocusedTask(taskId)
   await router.push('/dashboard/pomidoro')
 }
@@ -70,6 +74,8 @@ const startFocus = async (taskId: string) => {
       :tasks="tasks"
       :loading="isLoading"
       :focused-task-id="focusedTaskId"
+      :updating-status-ids="updatingStatusIds"
+      @change-status="updateTaskStatus"
       @focus="startFocus"
       @remove="removeTask"
       @add-subtask="createSubtask"

@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import type { CreateTaskDTO, TaskItem, TaskSort } from '~/types/tasks.types'
+import type {
+  CreateTaskDTO,
+  TaskItem,
+  TaskSort,
+  TaskStatus,
+} from '~/types/tasks.types'
 import DashboardTask from '~/components/dashboard/tasks/Task.vue'
 
 const props = defineProps<{
   tasks: TaskItem[]
   focusedTaskId: string | null
   loading?: boolean
+  updatingStatusIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +19,7 @@ const emit = defineEmits<{
   remove: [taskId: string]
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
+  changeStatus: [taskId: string, status: TaskStatus]
 }>()
 
 const sortItems = [
@@ -103,6 +110,10 @@ const sortedTasks = computed(() => {
         :key="task.id"
         :task="task"
         :focused-task-id="focusedTaskId"
+        :updating-status="updatingStatusIds?.includes(task.id)"
+        @change-status="
+          (taskId, status) => emit('changeStatus', taskId, status)
+        "
         @focus="(taskId) => emit('focus', taskId)"
         @remove="(taskId) => emit('remove', taskId)"
         @add-subtask="(payload) => emit('addSubtask', payload)"

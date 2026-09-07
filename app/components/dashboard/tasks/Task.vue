@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import type { CreateTaskDTO, TaskItem, TaskStatus } from '~/types/tasks.types'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import {
+  TASK_STATUS,
+  type CreateTaskDTO,
+  type TaskItem,
+  type TaskStatus,
+} from '~/types/tasks.types'
 
 const props = defineProps<{
   task: TaskItem
   focusedTaskId: string | null
+  updatingStatus?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -11,6 +18,7 @@ const emit = defineEmits<{
   remove: [taskId: string]
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
+  changeStatus: [taskId: string, status: TaskStatus]
 }>()
 
 const priorityBadgeColor = {
@@ -29,7 +37,7 @@ const statusBadgeColor = {
 } as const
 
 const statusLabel: Record<TaskStatus, string> = {
-  created: 'Created',
+  created: 'To do',
   in_progress: 'In progress',
   completed: 'Completed',
   on_hold: 'On hold',
@@ -38,6 +46,16 @@ const statusLabel: Record<TaskStatus, string> = {
 }
 
 const newSubtaskTitle = ref('')
+
+const statusItems = computed<DropdownMenuItem[]>(() =>
+  Object.values(TASK_STATUS).map((status) => ({
+    label: statusLabel[status],
+    color: statusBadgeColor[status],
+    icon: props.task.status === status ? 'i-lucide-check' : undefined,
+    disabled: props.updatingStatus || props.task.status === status,
+    onSelect: () => emit('changeStatus', props.task.id, status),
+  })),
+)
 
 const addSubtaskToTask = () => {
   emit('addSubtask', {
@@ -71,6 +89,19 @@ const formattedDeadline = computed(() =>
             <h3 class="text-base font-semibold text-highlighted">
               {{ task.title }}
             </h3>
+            <UDropdownMenu :items="statusItems">
+              <UButton
+                :color="statusBadgeColor[task.status]"
+                variant="soft"
+                size="xs"
+                class="rounded-full"
+                trailing-icon="i-lucide-chevron-down"
+                :disabled="updatingStatus"
+                :aria-label="`Change status for ${task.title}: ${statusLabel[task.status]}`"
+              >
+                {{ statusLabel[task.status] }}
+              </UButton>
+            </UDropdownMenu>
             <UBadge
               :color="priorityBadgeColor[task.priority]"
               variant="subtle"
@@ -78,13 +109,6 @@ const formattedDeadline = computed(() =>
               class="capitalize"
             >
               {{ task.priority }} priority
-            </UBadge>
-            <UBadge
-              :color="statusBadgeColor[task.status]"
-              variant="soft"
-              size="sm"
-            >
-              {{ statusLabel[task.status] }}
             </UBadge>
             <UBadge
               v-if="focusedTaskId === task.id"
@@ -119,6 +143,7 @@ const formattedDeadline = computed(() =>
             color="primary"
             variant="soft"
             icon="i-lucide-play"
+            :disabled="updatingStatus"
             @click="emit('focus', task.id)"
           >
             Start focus

@@ -21,13 +21,16 @@ type TaskRow = Pick<
   | 'status'
 >
 
-const { fromMock } = vi.hoisted(() => ({
+const { fromMock, toastAddMock } = vi.hoisted(() => ({
   fromMock: vi.fn(),
+  toastAddMock: vi.fn(),
 }))
 
 mockNuxtImport('useSupabaseClient', () => {
   return () => ({ from: fromMock })
 })
+
+mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
 const makeTaskRow = (overrides: Partial<TaskRow> = {}): TaskRow => ({
   id: 'task-1',
@@ -465,6 +468,107 @@ describe('useTasks', () => {
 
       expect(tasks.value).toEqual([makeTaskItem()])
       expect(focusedTaskId.value).toBe('task-1')
+    })
+  })
+
+  describe('updateTaskStatus', () => {
+    it.each(Object.values(TASK_STATUS))(
+      'optimistically updates to %s and persists only the target task',
+      async (status) => {
+        let resolveRequest: (value: unknown) => void = () => {}
+        queryBuilder.single.mockReturnValue(
+          new Promise((resolve) => {
+            resolveRequest = resolve
+          }),
+        )
+        const { tasks, updateTaskStatus, updatingStatusIds } = useTasks()
+        const previousStatus =
+          status === TASK_STATUS.CREATED
+            ? TASK_STATUS.COMPLETED
+            : TASK_STATUS.CREATED
+        const sibling = makeTaskItem({ id: 'task-2' })
+        tasks.value = [sibling, makeTaskItem({ status: previousStatus })]
+
+        const request = updateTaskStatus('task-1', status)
+
+        expect(tasks.value[1]?.status).toBe(status)
+        expect(tasks.value[0]).toEqual(sibling)
+        expect(updatingStatusIds.value).toEqual(['task-1'])
+        expect(fromMock).toHaveBeenCalledWith('tasks')
+        expect(queryBuilder.update).toHaveBeenCalledWith({ status })
+        expect(queryBuilder.eq).toHaveBeenCalledWith('id', 'task-1')
+        resolveRequest({ data: { id: 'task-1' }, error: null })
+
+        expect(await request).toBe(true)
+        expect(tasks.value[1]?.status).toBe(status)
+        expect(updatingStatusIds.value).toEqual([])
+        expect(toastAddMock).not.toHaveBeenCalled()
+      },
+    )
+
+    it.each(['response error', 'rejected request'])(
+      'restores the previous status and shows a toast on %s',
+      async (failure) => {
+        let resolveRequest: (value: unknown) => void = () => {}
+        let rejectRequest: (reason: unknown) => void = () => {}
+        queryBuilder.single.mockReturnValue(
+          new Promise((resolve, reject) => {
+            resolveRequest = resolve
+            rejectRequest = reject
+          }),
+        )
+        const { tasks, updateTaskStatus, updatingStatusIds } = useTasks()
+        tasks.value = [makeTaskItem({ status: TASK_STATUS.ON_HOLD })]
+
+        const request = updateTaskStatus('task-1', TASK_STATUS.IN_PROGRESS)
+        expect(tasks.value[0]?.status).toBe(TASK_STATUS.IN_PROGRESS)
+
+        const error = new Error('Unable to save')
+        if (failure === 'response error') resolveRequest({ data: null, error })
+        else rejectRequest(error)
+
+        expect(await request).toBe(false)
+        expect(tasks.value[0]?.status).toBe(TASK_STATUS.ON_HOLD)
+        expect(updatingStatusIds.value).toEqual([])
+        expect(toastAddMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            color: 'error',
+            title: 'Unable to update task status',
+          }),
+        )
+      },
+    )
+
+    it('skips missing tasks and unchanged statuses', async () => {
+      const { tasks, updateTaskStatus } = useTasks()
+      tasks.value = [makeTaskItem()]
+
+      expect(await updateTaskStatus('missing', TASK_STATUS.COMPLETED)).toBe(
+        false,
+      )
+      expect(await updateTaskStatus('task-1', TASK_STATUS.CREATED)).toBe(true)
+      expect(fromMock).not.toHaveBeenCalled()
+    })
+
+    it('prevents overlapping updates for the same task across composable instances', async () => {
+      let resolveRequest: (value: unknown) => void = () => {}
+      queryBuilder.single.mockReturnValue(
+        new Promise((resolve) => {
+          resolveRequest = resolve
+        }),
+      )
+      const { tasks, updateTaskStatus } = useTasks()
+      tasks.value = [makeTaskItem()]
+
+      const request = updateTaskStatus('task-1', TASK_STATUS.COMPLETED)
+      expect(
+        await useTasks().updateTaskStatus('task-1', TASK_STATUS.IN_PROGRESS),
+      ).toBe(false)
+      expect(queryBuilder.update).toHaveBeenCalledOnce()
+      expect(tasks.value[0]?.status).toBe(TASK_STATUS.COMPLETED)
+
+      resolveRequest({ data: { id: 'task-1' }, error: null })
+      await request
     })
   })
 
