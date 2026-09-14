@@ -34,6 +34,12 @@ const nav = [
     exact: true,
   },
   {
+    to: '/dashboard/habits',
+    label: 'Habits',
+    icon: 'i-lucide-sprout',
+    exact: true,
+  },
+  {
     to: '/dashboard/pomidoro',
     label: 'Pomidoro',
     icon: 'i-lucide-timer',
@@ -89,11 +95,7 @@ const profileMenuItems = computed(() => [
   >
     <template #header>
       <div class="w-full px-4 py-3">
-        <NuxtLink
-          to="/dashboard"
-          class=""
-          aria-label="Milestone dashboard"
-        >
+        <NuxtLink to="/dashboard" class="" aria-label="Milestone dashboard">
           <img
             :src="milestoneLogo"
             alt="Milestone"

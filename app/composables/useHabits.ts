@@ -369,7 +369,10 @@ export const useHabits = () => {
   const isTogglePending = (habitId: string, date: string): boolean =>
     pendingToggleKeys.value.includes(`${habitId}:${date}`)
 
-  const toggleCheckin = async (habitId: string, date: string) => {
+  const toggleCheckin = async (
+    habitId: string,
+    date: string,
+  ): Promise<boolean> => {
     const habit = habits.value.find((item) => item.id === habitId)
     const key = `${habitId}:${date}`
     if (
@@ -379,7 +382,7 @@ export const useHabits = () => {
       date > localToday.value ||
       pendingToggleKeys.value.includes(key)
     ) {
-      return
+      return false
     }
 
     const wasCompleted = isDateCompleted(habitId, date)
@@ -404,12 +407,14 @@ export const useHabits = () => {
     if (result.error) {
       setLocalCheckinState(habitId, date, wasCompleted)
       setError(result.error.message)
-      return
+      return false
     }
 
     if (selectedHabitId.value === habitId) {
       await refreshSelectedMonth()
     }
+
+    return true
   }
 
   const shiftMonth = async (monthOffset: -1 | 1) => {

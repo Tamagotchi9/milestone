@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HabitsPanel from '~/components/dashboard/habits/HabitsPanel.vue'
+import HabitTodayStepper from '~/components/dashboard/habits/HabitTodayStepper.vue'
 import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
 
 definePageMeta({ layout: 'dashboard' })
@@ -38,7 +38,7 @@ watch(
       Welcome back, {{ displayName }}
     </h1>
 
-    <HabitsPanel />
+    <HabitTodayStepper />
 
     <UCard>
       <template #header>
