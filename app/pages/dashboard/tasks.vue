@@ -12,6 +12,8 @@ const {
   tasks,
   isLoading,
   updatingStatusIds,
+  updatingPriorityIds,
+  updateTaskPriority,
   updateTaskStatus,
   getTasks,
   addTask,
@@ -51,7 +53,7 @@ const startFocus = async (taskId: string) => {
 </script>
 
 <template>
-  <main class="mx-auto w-full max-w-4xl space-y-6 p-6 md:p-10">
+  <main class="mx-auto w-full max-w-screen-2xl space-y-6 p-4 md:p-10">
     <header class="flex flex-wrap items-start justify-between gap-4">
       <div class="max-w-2xl space-y-1">
         <h1 class="text-2xl font-semibold text-highlighted">Tasks</h1>
@@ -75,6 +77,8 @@ const startFocus = async (taskId: string) => {
       :loading="isLoading"
       :focused-task-id="focusedTaskId"
       :updating-status-ids="updatingStatusIds"
+      :updating-priority-ids="updatingPriorityIds"
+      @change-priority="updateTaskPriority"
       @change-status="updateTaskStatus"
       @focus="startFocus"
       @remove="removeTask"

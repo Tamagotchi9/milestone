@@ -3,6 +3,7 @@ import {
   TASK_STATUS,
   type CreateTaskDTO,
   type TaskItem,
+  type TaskPriority,
   type TaskStatus,
 } from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
@@ -63,6 +64,10 @@ export const useTasks = () => {
   const supabase = useSupabaseClient<Database>()
   const toast = useToast()
   const tasks = useState<TaskItem[]>('tasks.items', () => [])
+  const updatingPriorityIds = useState<string[]>(
+    'tasks.updatingPriorityIds',
+    () => [],
+  )
   const updatingStatusIds = useState<string[]>(
     'tasks.updatingStatusIds',
     () => [],
@@ -239,6 +244,41 @@ export const useTasks = () => {
     }
   }
 
+  const updateTaskPriority = async (taskId: string, priority: TaskPriority) => {
+    const task = tasks.value.find((item) => item.id === taskId)
+    if (!task || updatingPriorityIds.value.includes(taskId)) return false
+    if (task.priority === priority) return true
+
+    const previousPriority = task.priority
+    task.priority = priority
+    updatingPriorityIds.value.push(taskId)
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ priority })
+        .eq('id', taskId)
+        .select('id')
+        .single()
+      if (error) throw error
+      return true
+    } catch {
+      const currentTask = tasks.value.find((item) => item.id === taskId)
+      if (currentTask) currentTask.priority = previousPriority
+      toast.add({
+        title: 'Unable to update task priority',
+        description:
+          'The previous priority has been restored. Please try again.',
+        color: 'error',
+      })
+      return false
+    } finally {
+      updatingPriorityIds.value = updatingPriorityIds.value.filter(
+        (id) => id !== taskId,
+      )
+    }
+  }
+
   const setFocusedTask = (taskId: string | null) => {
     focusedTaskId.value = taskId
   }
@@ -247,6 +287,7 @@ export const useTasks = () => {
     tasks,
     isLoading,
     updatingStatusIds,
+    updatingPriorityIds,
     focusedTaskId,
     focusedTask,
     getTasks,
@@ -254,6 +295,7 @@ export const useTasks = () => {
     removeTask,
     toggleSubtask,
     updateTaskStatus,
+    updateTaskPriority,
     setFocusedTask,
   }
 }

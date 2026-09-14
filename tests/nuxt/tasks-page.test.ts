@@ -4,15 +4,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TasksPage from '~/pages/dashboard/tasks.vue'
 import { TASK_STATUS } from '~/types/tasks.types'
 
-const { updateTaskStatus, setFocusedTask } = vi.hoisted(() => ({
-  updateTaskStatus: vi.fn(),
-  setFocusedTask: vi.fn(),
-}))
+const { updateTaskStatus, updateTaskPriority, setFocusedTask } = vi.hoisted(
+  () => ({
+    updateTaskStatus: vi.fn(),
+    updateTaskPriority: vi.fn(),
+    setFocusedTask: vi.fn(),
+  }),
+)
 
 mockNuxtImport('useTasks', () => () => ({
   tasks: [],
   isLoading: false,
   updatingStatusIds: [],
+  updatingPriorityIds: [],
+  updateTaskPriority,
   focusedTaskId: null,
   getTasks: vi.fn(),
   addTask: vi.fn(),
@@ -38,6 +43,15 @@ const mountPage = () =>
 
 describe('tasks page focus', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('persists the priority selected in the task list', async () => {
+    const wrapper = await mountPage()
+    wrapper
+      .findComponent({ name: 'TaskList' })
+      .vm.$emit('changePriority', 'task-1', 'low')
+    expect(updateTaskPriority).toHaveBeenCalledWith('task-1', 'low')
+    wrapper.unmount()
+  })
 
   it('saves in_progress before selecting the task and opening the timer', async () => {
     let resolveRequest: (value: boolean) => void = () => {}

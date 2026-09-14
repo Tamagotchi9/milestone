@@ -93,6 +93,83 @@ describe('useTasks', () => {
     fromMock.mockReturnValue(queryBuilder)
   })
 
+  describe('updateTaskPriority', () => {
+    it.each(['high', 'medium', 'low'] as const)(
+      'optimistically saves %s priority',
+      async (priority) => {
+        let resolveRequest: (value: unknown) => void = () => {}
+        queryBuilder.single.mockReturnValue(
+          new Promise((resolve) => {
+            resolveRequest = resolve
+          }),
+        )
+        const { tasks, updateTaskPriority, updatingPriorityIds } = useTasks()
+        tasks.value = [
+          makeTaskItem({ priority: priority === 'low' ? 'high' : 'low' }),
+          makeTaskItem({ id: 'sibling' }),
+        ]
+        const request = updateTaskPriority('task-1', priority)
+        expect(tasks.value[0]?.priority).toBe(priority)
+        expect(tasks.value[1]?.priority).toBe('medium')
+        expect(updatingPriorityIds.value).toEqual(['task-1'])
+        expect(fromMock).toHaveBeenCalledWith('tasks')
+        expect(queryBuilder.update).toHaveBeenCalledWith({ priority })
+        expect(queryBuilder.eq).toHaveBeenCalledWith('id', 'task-1')
+        expect(queryBuilder.select).toHaveBeenCalledWith('id')
+        resolveRequest({ data: { id: 'task-1' }, error: null })
+        expect(await request).toBe(true)
+        expect(tasks.value[0]?.priority).toBe(priority)
+        expect(updatingPriorityIds.value).toEqual([])
+        expect(toastAddMock).not.toHaveBeenCalled()
+      },
+    )
+
+    it.each(['response', 'rejection'])(
+      'rolls back and shows a toast on %s failure',
+      async (failure) => {
+        if (failure === 'response')
+          queryBuilder.single.mockResolvedValue({
+            data: null,
+            error: { message: 'Denied' },
+          })
+        else queryBuilder.single.mockRejectedValue(new Error('Offline'))
+        const { tasks, updateTaskPriority, updatingPriorityIds } = useTasks()
+        tasks.value = [makeTaskItem()]
+        const request = updateTaskPriority('task-1', 'high')
+        expect(tasks.value[0]?.priority).toBe('high')
+        expect(await request).toBe(false)
+        expect(tasks.value[0]?.priority).toBe('medium')
+        expect(updatingPriorityIds.value).toEqual([])
+        expect(toastAddMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Unable to update task priority',
+            color: 'error',
+          }),
+        )
+      },
+    )
+
+    it('ignores missing, unchanged, and already pending tasks across instances', async () => {
+      let resolveRequest: (value: unknown) => void = () => {}
+      queryBuilder.single.mockReturnValue(
+        new Promise((resolve) => {
+          resolveRequest = resolve
+        }),
+      )
+      const first = useTasks()
+      const second = useTasks()
+      first.tasks.value = [makeTaskItem()]
+      expect(await first.updateTaskPriority('missing', 'high')).toBe(false)
+      expect(await first.updateTaskPriority('task-1', 'medium')).toBe(true)
+      expect(fromMock).not.toHaveBeenCalled()
+      const request = first.updateTaskPriority('task-1', 'high')
+      expect(await second.updateTaskPriority('task-1', 'low')).toBe(false)
+      expect(queryBuilder.update).toHaveBeenCalledTimes(1)
+      resolveRequest({ data: { id: 'task-1' }, error: null })
+      await request
+    })
+  })
+
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
