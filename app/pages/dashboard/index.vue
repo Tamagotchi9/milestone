@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import HabitsPanel from '~/components/dashboard/habits/HabitsPanel.vue'
+import HabitTodayStepper from '~/components/dashboard/habits/HabitTodayStepper.vue'
 import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
 
 definePageMeta({ layout: 'dashboard' })
@@ -34,38 +34,11 @@ watch(
 
 <template>
   <div class="max-w-6xl space-y-4 p-6 md:p-10">
-    <UCard>
-      <template #header>
-        <div class="space-y-1">
-          <h1 class="text-2xl font-semibold text-highlighted">
-            Welcome back, {{ displayName }}
-          </h1>
-          <p class="text-sm text-muted">
-            Pick a section from the sidebar to get started.
-          </p>
-        </div>
-      </template>
+    <h1 class="text-2xl font-semibold text-highlighted">
+      Welcome back, {{ displayName }}
+    </h1>
 
-      <p class="text-muted">
-        Plan your
-        <NuxtLink
-          to="/dashboard/tasks"
-          class="font-medium text-primary hover:underline"
-        >
-          Tasks
-        </NuxtLink>
-        and then start
-        <NuxtLink
-          to="/dashboard/pomidoro"
-          class="font-medium text-primary hover:underline"
-        >
-          Pomidoro
-        </NuxtLink>
-        for a focused work session.
-      </p>
-    </UCard>
-
-    <HabitsPanel />
+    <HabitTodayStepper />
 
     <UCard>
       <template #header>
