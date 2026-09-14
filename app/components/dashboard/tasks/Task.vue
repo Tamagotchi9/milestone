@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import type { CreateTaskDTO, TaskItem, TaskStatus } from '~/types/tasks.types'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import {
+  TASK_STATUS,
+  type CreateTaskDTO,
+  type TaskItem,
+  type TaskStatus,
+} from '~/types/tasks.types'
 
 const props = defineProps<{
   task: TaskItem
   focusedTaskId: string | null
+  updatingStatus?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -11,13 +18,10 @@ const emit = defineEmits<{
   remove: [taskId: string]
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
+  changeStatus: [taskId: string, status: TaskStatus]
 }>()
 
-const priorityBadgeColor = {
-  high: 'error',
-  medium: 'warning',
-  low: 'success',
-} as const
+const newSubtaskTitle = defineModel<string>('subtaskDraft', { default: '' })
 
 const statusBadgeColor = {
   created: 'neutral',
@@ -29,7 +33,7 @@ const statusBadgeColor = {
 } as const
 
 const statusLabel: Record<TaskStatus, string> = {
-  created: 'Created',
+  created: 'To do',
   in_progress: 'In progress',
   completed: 'Completed',
   on_hold: 'On hold',
@@ -37,7 +41,15 @@ const statusLabel: Record<TaskStatus, string> = {
   abandoned: 'Abandoned',
 }
 
-const newSubtaskTitle = ref('')
+const statusItems = computed<DropdownMenuItem[]>(() =>
+  Object.values(TASK_STATUS).map((status) => ({
+    label: statusLabel[status],
+    color: statusBadgeColor[status],
+    icon: props.task.status === status ? 'i-lucide-check' : undefined,
+    disabled: props.updatingStatus || props.task.status === status,
+    onSelect: () => emit('changeStatus', props.task.id, status),
+  })),
+)
 
 const addSubtaskToTask = () => {
   emit('addSubtask', {
@@ -63,94 +75,89 @@ const formattedDeadline = computed(() =>
 </script>
 
 <template>
-  <UCard class="transition-shadow duration-200 hover:shadow-md">
+  <UCard
+    :data-task-card-id="task.id"
+    class="overflow-hidden rounded-xl transition-shadow duration-200 hover:shadow-md"
+    :class="focusedTaskId === task.id ? 'ring-2 ring-primary/40' : ''"
+    :ui="{ body: 'p-4 sm:p-4' }"
+  >
     <article class="space-y-4">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0 flex-1 space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <h3 class="text-base font-semibold text-highlighted">
-              {{ task.title }}
-            </h3>
-            <UBadge
-              :color="priorityBadgeColor[task.priority]"
-              variant="subtle"
-              size="sm"
-              class="capitalize"
-            >
-              {{ task.priority }} priority
-            </UBadge>
-            <UBadge
-              :color="statusBadgeColor[task.status]"
-              variant="soft"
-              size="sm"
-            >
-              {{ statusLabel[task.status] }}
-            </UBadge>
-            <UBadge
-              v-if="focusedTaskId === task.id"
-              color="primary"
-              variant="soft"
-              size="sm"
-              icon="i-lucide-focus"
-            >
-              Focusing
-            </UBadge>
-          </div>
-          <p v-if="task.description" class="text-sm leading-5 text-muted">
-            {{ task.description }}
-          </p>
-          <div
-            class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted"
-          >
-            <span class="inline-flex items-center gap-1.5">
-              <UIcon name="i-lucide-calendar" class="size-3.5" />
-              {{ formattedDeadline }}
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <UIcon name="i-lucide-list-checks" class="size-3.5" />
-              {{ subtaskCompletion }} subtasks
-            </span>
-          </div>
-        </div>
-
-        <div class="flex shrink-0 flex-wrap gap-2">
+      <header class="flex flex-wrap items-center justify-between gap-2">
+        <UDropdownMenu :items="statusItems">
           <UButton
-            size="sm"
-            color="primary"
+            data-task-focus="status"
+            :color="statusBadgeColor[task.status]"
             variant="soft"
-            icon="i-lucide-play"
-            @click="emit('focus', task.id)"
+            size="xs"
+            class="rounded-full"
+            trailing-icon="i-lucide-chevron-down"
+            :disabled="updatingStatus"
+            :aria-label="`Change status for ${task.title}: ${statusLabel[task.status]}`"
           >
-            Start focus
+            {{ statusLabel[task.status] }}
           </UButton>
-          <UButton
-            size="sm"
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-trash-2"
-            @click="emit('remove', task.id)"
+        </UDropdownMenu>
+        <slot name="move" />
+      </header>
+
+      <div class="min-w-0 space-y-2">
+        <h4
+          class="text-base font-semibold leading-6 text-highlighted [overflow-wrap:anywhere]"
+        >
+          {{ task.title }}
+        </h4>
+        <p
+          v-if="task.description"
+          class="text-sm leading-relaxed text-muted [overflow-wrap:anywhere]"
+        >
+          {{ task.description }}
+        </p>
+        <div
+          v-if="task.deadline || focusedTaskId === task.id"
+          class="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1 text-xs"
+        >
+          <span
+            v-if="task.deadline"
+            class="inline-flex items-center gap-1.5 text-muted"
           >
-            Delete
-          </UButton>
+            <UIcon name="i-lucide-calendar" class="size-3.5 shrink-0" />
+            <time :datetime="task.deadline">{{ formattedDeadline }}</time>
+          </span>
+          <span
+            v-if="focusedTaskId === task.id"
+            class="inline-flex items-center gap-1.5 font-medium text-primary"
+          >
+            <UIcon name="i-lucide-focus" class="size-3.5 shrink-0" />
+            Focusing
+          </span>
         </div>
       </div>
 
-      <div class="space-y-3 border-t border-default pt-4">
-        <div v-if="task.subtasks.length > 0" class="space-y-2">
+      <div class="space-y-3 rounded-lg bg-elevated/50 p-3">
+        <div
+          v-if="task.subtasks.length"
+          class="flex items-center justify-between text-xs"
+        >
+          <span class="font-medium text-muted">Subtasks</span>
+          <span class="tabular-nums text-dimmed">{{ subtaskCompletion }}</span>
+        </div>
+        <div v-if="task.subtasks.length" class="space-y-1">
           <label
             v-for="subtask in task.subtasks"
             :key="subtask.id"
-            class="flex items-center gap-2.5 text-sm"
+            class="flex cursor-pointer items-start gap-2.5 rounded-md py-1.5 text-sm"
           >
             <input
               type="checkbox"
-              :checked="subtask.status === 'completed'"
-              class="size-4 rounded border-default"
+              :checked="subtask.status === TASK_STATUS.COMPLETED"
+              class="mt-0.5 size-4 shrink-0 rounded border-default accent-primary"
+              :data-task-focus="`subtask-${subtask.id}`"
               @change="emit('toggleSubtask', subtask.id)"
             />
             <span
+              class="min-w-0 leading-5 [overflow-wrap:anywhere]"
               :class="
-                subtask.status === 'completed'
+                subtask.status === TASK_STATUS.COMPLETED
                   ? 'line-through text-muted'
                   : 'text-default'
               "
@@ -161,25 +168,57 @@ const formattedDeadline = computed(() =>
         </div>
 
         <form
-          class="flex flex-col gap-2 sm:flex-row"
+          class="flex items-center gap-2"
           @submit.prevent="addSubtaskToTask"
         >
           <UInput
             v-model="newSubtaskTitle"
-            placeholder="Add a subtask"
-            class="flex-1"
+            data-task-focus="subtask-input"
+            placeholder="Add a subtask…"
+            :aria-label="`New subtask for ${task.title}`"
+            size="sm"
+            class="min-w-0 flex-1"
           />
           <UButton
+            data-task-focus="add-subtask"
             type="submit"
             color="neutral"
             variant="soft"
-            icon="i-lucide-list-plus"
+            size="sm"
+            icon="i-lucide-plus"
+            class="shrink-0"
+            aria-label="Add subtask"
+            title="Add subtask"
             :disabled="!newSubtaskTitle.trim()"
-          >
-            Add subtask
-          </UButton>
+          />
         </form>
       </div>
+
+      <footer class="flex items-center gap-2 border-t border-default pt-3">
+        <UButton
+          data-task-focus="start-focus"
+          size="sm"
+          color="primary"
+          variant="soft"
+          icon="i-lucide-play"
+          class="min-w-0 flex-1 justify-center"
+          :disabled="updatingStatus"
+          @click="emit('focus', task.id)"
+        >
+          Start focus
+        </UButton>
+        <UButton
+          data-task-focus="delete"
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-trash-2"
+          class="shrink-0 hover:text-error"
+          :aria-label="`Delete ${task.title}`"
+          title="Delete task"
+          @click="emit('remove', task.id)"
+        />
+      </footer>
     </article>
   </UCard>
 </template>

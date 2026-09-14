@@ -1,5 +1,11 @@
 import type { Database } from '~/types/database.types'
-import type { CreateTaskDTO, TaskItem, TaskPriority } from '~/types/tasks.types'
+import {
+  TASK_STATUS,
+  type CreateTaskDTO,
+  type TaskItem,
+  type TaskPriority,
+  type TaskStatus,
+} from '~/types/tasks.types'
 const FOCUS_STORAGE_KEY = 'milestone.tasks.focus.v1'
 
 const TASK_SELECT =
@@ -56,7 +62,16 @@ const rowsToTaskItems = (rows: TaskRow[]): TaskItem[] => {
 
 export const useTasks = () => {
   const supabase = useSupabaseClient<Database>()
+  const toast = useToast()
   const tasks = useState<TaskItem[]>('tasks.items', () => [])
+  const updatingPriorityIds = useState<string[]>(
+    'tasks.updatingPriorityIds',
+    () => [],
+  )
+  const updatingStatusIds = useState<string[]>(
+    'tasks.updatingStatusIds',
+    () => [],
+  )
   const focusedTaskId = useState<string | null>(
     'tasks.focusedTaskId',
     () => null,
@@ -164,30 +179,103 @@ export const useTasks = () => {
     }
   }
 
-  const setTaskPriority = (taskId: string, priority: TaskPriority) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    task.priority = priority
-  }
-
-  const setTaskDeadline = (taskId: string, deadline: string | null) => {
-    const task = tasks.value.find((item) => item.id === taskId)
-    if (!task) return
-    task.deadline = normalizeDeadline(deadline)
-  }
-
   const toggleSubtask = async (subtaskId: string) => {
+    const subtask = tasks.value
+      .flatMap((task) => task.subtasks)
+      .find((item) => item.id === subtaskId)
+    if (!subtask) return
+
+    const previousStatus = subtask.status
+    const nextStatus =
+      previousStatus === TASK_STATUS.COMPLETED
+        ? TASK_STATUS.CREATED
+        : TASK_STATUS.COMPLETED
+    subtask.status = nextStatus
+
     const { error } = await supabase
       .from('tasks')
       .update({
-        status: 'completed',
+        status: nextStatus,
       })
       .eq('id', subtaskId)
+      .select(TASK_SELECT)
+      .single()
 
     if (error) {
+      subtask.status = previousStatus
       // TODO: toast error
       console.error('toggleSubtask:', error.message)
       return
+    }
+  }
+
+  const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
+    const task = tasks.value.find((item) => item.id === taskId)
+    if (!task || updatingStatusIds.value.includes(taskId)) return false
+    if (task.status === status) return true
+
+    const previousStatus = task.status
+    task.status = status
+    updatingStatusIds.value.push(taskId)
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status })
+        .eq('id', taskId)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      return true
+    } catch {
+      const currentTask = tasks.value.find((item) => item.id === taskId)
+      if (currentTask) currentTask.status = previousStatus
+      toast.add({
+        title: 'Unable to update task status',
+        description: 'The previous status has been restored. Please try again.',
+        color: 'error',
+      })
+      return false
+    } finally {
+      updatingStatusIds.value = updatingStatusIds.value.filter(
+        (id) => id !== taskId,
+      )
+    }
+  }
+
+  const updateTaskPriority = async (taskId: string, priority: TaskPriority) => {
+    const task = tasks.value.find((item) => item.id === taskId)
+    if (!task || updatingPriorityIds.value.includes(taskId)) return false
+    if (task.priority === priority) return true
+
+    const previousPriority = task.priority
+    task.priority = priority
+    updatingPriorityIds.value.push(taskId)
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ priority })
+        .eq('id', taskId)
+        .select('id')
+        .single()
+      if (error) throw error
+      return true
+    } catch {
+      const currentTask = tasks.value.find((item) => item.id === taskId)
+      if (currentTask) currentTask.priority = previousPriority
+      toast.add({
+        title: 'Unable to update task priority',
+        description:
+          'The previous priority has been restored. Please try again.',
+        color: 'error',
+      })
+      return false
+    } finally {
+      updatingPriorityIds.value = updatingPriorityIds.value.filter(
+        (id) => id !== taskId,
+      )
     }
   }
 
@@ -198,14 +286,16 @@ export const useTasks = () => {
   return {
     tasks,
     isLoading,
+    updatingStatusIds,
+    updatingPriorityIds,
     focusedTaskId,
     focusedTask,
     getTasks,
     addTask,
     removeTask,
-    setTaskPriority,
-    setTaskDeadline,
     toggleSubtask,
+    updateTaskStatus,
+    updateTaskPriority,
     setFocusedTask,
   }
 }
