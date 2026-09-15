@@ -11,6 +11,7 @@ import {
   type CreateHabitInput,
   type Habit,
   type HabitStats,
+  type HabitStreakStat,
   type RenameHabitInput,
 } from '~/types/habits.types'
 import { toFiniteNumber } from '~/utils/toFiniteNumber'
@@ -25,6 +26,9 @@ type HabitRow = Pick<
 
 type HabitStatsRow =
   Database['public']['Functions']['habit_stats']['Returns'][number]
+
+type HabitStreakStatsRow =
+  Database['public']['Functions']['active_habit_streaks']['Returns'][number]
 
 const mapHabitRow = (row: HabitRow): Habit => ({
   id: row.id,
@@ -43,6 +47,18 @@ const mapStatsRow = (row?: HabitStatsRow | null): HabitStats =>
         eligibleDaysInMonth: toFiniteNumber(row.eligible_days_in_month),
       }
     : { ...EMPTY_HABIT_STATS }
+
+const mapStreakStatsRow = (row: HabitStreakStatsRow): HabitStreakStat => {
+  const currentStreak = toFiniteNumber(row.current_streak)
+  const longestStreak = toFiniteNumber(row.longest_streak)
+
+  return {
+    habitId: row.habit_id,
+    currentStreak,
+    longestStreak,
+    daysToBeatLongest: Math.max(longestStreak - currentStreak + 1, 1),
+  }
+}
 
 const getLocalToday = () => today(getLocalTimeZone()).toString()
 
@@ -80,13 +96,25 @@ export const useHabits = () => {
   const stats = useState<HabitStats>('habits.stats', () => ({
     ...EMPTY_HABIT_STATS,
   }))
+  const activeHabitStreaks = useState<HabitStreakStat[]>(
+    'habits.activeStreaks',
+    () => [],
+  )
   const pendingToggleKeys = useState<string[]>(
     'habits.pendingToggleKeys',
     () => [],
   )
   const isLoading = useState<boolean>('habits.loading', () => false)
   const isMonthLoading = useState<boolean>('habits.monthLoading', () => false)
+  const isStreaksLoading = useState<boolean>(
+    'habits.streaksLoading',
+    () => false,
+  )
   const errorMessage = useState<string | null>('habits.error', () => null)
+  const streaksError = useState<string | null>(
+    'habits.streaksError',
+    () => null,
+  )
 
   const replaceHabit = (updatedHabit: Habit) => {
     habits.value = habits.value.map((habit) =>
@@ -209,6 +237,29 @@ export const useHabits = () => {
     stats.value = mapStatsRow(statsRow)
   }
 
+  const refreshActiveHabitStreaks = async () => {
+    if (!localToday.value || activeHabits.value.length === 0) {
+      activeHabitStreaks.value = []
+      streaksError.value = null
+      return
+    }
+
+    isStreaksLoading.value = true
+    streaksError.value = null
+    const { data, error } = await supabase.rpc('active_habit_streaks', {
+      p_today: localToday.value,
+    })
+    isStreaksLoading.value = false
+
+    if (error) {
+      activeHabitStreaks.value = []
+      streaksError.value = error.message
+      return
+    }
+
+    activeHabitStreaks.value = (data ?? []).map(mapStreakStatsRow)
+  }
+
   const getHabits = async () => {
     isLoading.value = true
     setError(null)
@@ -221,6 +272,7 @@ export const useHabits = () => {
 
     if (error) {
       isLoading.value = false
+      activeHabitStreaks.value = []
       setError(error.message)
       return
     }
@@ -241,7 +293,11 @@ export const useHabits = () => {
       ? getMonthStart(initialHabit.archivedOn ?? localToday.value)
       : getMonthStart(localToday.value)
 
-    await Promise.all([refreshTodayCheckins(), refreshSelectedMonth()])
+    await Promise.all([
+      refreshTodayCheckins(),
+      refreshSelectedMonth(),
+      refreshActiveHabitStreaks(),
+    ])
     isLoading.value = false
   }
 
@@ -278,7 +334,7 @@ export const useHabits = () => {
     habits.value = [habit, ...habits.value]
     selectedHabitId.value = habit.id
     visibleMonth.value = getMonthStart(localToday.value)
-    await refreshSelectedMonth()
+    await Promise.all([refreshSelectedMonth(), refreshActiveHabitStreaks()])
     return true
   }
 
@@ -330,7 +386,11 @@ export const useHabits = () => {
     visibleMonth.value = getMonthStart(
       archivedHabit.archivedOn ?? localToday.value,
     )
-    await Promise.all([refreshTodayCheckins(), refreshSelectedMonth()])
+    await Promise.all([
+      refreshTodayCheckins(),
+      refreshSelectedMonth(),
+      refreshActiveHabitStreaks(),
+    ])
     return true
   }
 
@@ -356,7 +416,11 @@ export const useHabits = () => {
     replaceHabit(restoredHabit)
     selectedHabitId.value = restoredHabit.id
     visibleMonth.value = getMonthStart(localToday.value)
-    await Promise.all([refreshTodayCheckins(), refreshSelectedMonth()])
+    await Promise.all([
+      refreshTodayCheckins(),
+      refreshSelectedMonth(),
+      refreshActiveHabitStreaks(),
+    ])
     return true
   }
 
@@ -410,9 +474,12 @@ export const useHabits = () => {
       return false
     }
 
-    if (selectedHabitId.value === habitId) {
-      await refreshSelectedMonth()
-    }
+    await Promise.all([
+      refreshActiveHabitStreaks(),
+      selectedHabitId.value === habitId
+        ? refreshSelectedMonth()
+        : Promise.resolve(),
+    ])
 
     return true
   }
@@ -439,9 +506,12 @@ export const useHabits = () => {
     localToday,
     monthCheckinDates,
     stats,
+    activeHabitStreaks,
     isLoading,
     isMonthLoading,
+    isStreaksLoading,
     errorMessage,
+    streaksError,
     canGoToPreviousMonth,
     canGoToNextMonth,
     getHabits,
@@ -454,5 +524,6 @@ export const useHabits = () => {
     isTogglePending,
     toggleCheckin,
     shiftMonth,
+    refreshActiveHabitStreaks,
   }
 }

@@ -169,6 +169,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      active_habit_streaks: {
+        Args: { p_today: string }
+        Returns: {
+          current_streak: number
+          habit_id: string
+          longest_streak: number
+        }[]
+      }
       habit_stats: {
         Args: {
           p_habit_id: string
@@ -180,6 +188,20 @@ export type Database = {
           completed_in_month: number
           current_streak: number
           eligible_days_in_month: number
+        }[]
+      }
+      pomodoro_daily_stats: {
+        Args: {
+          p_task_id?: string | null
+          p_timezone: string
+          p_today: string
+        }
+        Returns: {
+          completed_for_task: number
+          completed_total: number
+          seconds_for_task: number
+          seconds_total: number
+          stat_date: string
         }[]
       }
       pomodoro_stats: {

@@ -1,12 +1,17 @@
 <script setup lang="ts">
+import { getLocalTimeZone, today } from '@internationalized/date'
+import FocusStatsCharts from '~/components/dashboard/FocusStatsCharts.client.vue'
+import HabitStreakOverview from '~/components/dashboard/habits/HabitStreakOverview.vue'
 import HabitTodayStepper from '~/components/dashboard/habits/HabitTodayStepper.vue'
-import PomodoroStatsSummary from '~/components/dashboard/PomodoroStatsSummary.vue'
 
 definePageMeta({ layout: 'dashboard' })
 
 const currentUserStore = useCurrentUserStore()
 const { focusedTask, getTasks } = useTasks()
-const { stats, fetchStats, isStatsLoading, statsError } = usePomodoroSessions()
+const { dailyStats, fetchDailyStats, isDailyStatsLoading, dailyStatsError } =
+  usePomodoroSessions()
+const localToday = ref('')
+const localTimeZone = ref('')
 
 const displayName = computed(() => {
   const meta = currentUserStore.user?.user_metadata as
@@ -20,13 +25,20 @@ const displayName = computed(() => {
 })
 
 onMounted(async () => {
+  localTimeZone.value = getLocalTimeZone()
+  localToday.value = today(localTimeZone.value).toString()
   await getTasks()
 })
 
 watch(
-  () => focusedTask.value?.id ?? null,
-  (taskId) => {
-    void fetchStats(taskId)
+  [localToday, localTimeZone, () => focusedTask.value?.id ?? null],
+  ([currentDate, timeZone, taskId]) => {
+    if (!currentDate || !timeZone) return
+    void fetchDailyStats({
+      today: currentDate,
+      timeZone,
+      taskId,
+    })
   },
   { immediate: true },
 )
@@ -40,19 +52,13 @@ watch(
 
     <HabitTodayStepper />
 
-    <UCard>
-      <template #header>
-        <h2 class="text-lg font-semibold text-highlighted">Focus stats</h2>
-      </template>
-      <p v-if="isStatsLoading" class="text-sm text-muted">Loading stats…</p>
-      <p v-else-if="statsError" class="text-sm text-muted">
-        Couldn’t load stats.
-      </p>
-      <PomodoroStatsSummary
-        v-else
-        :stats="stats"
-        :focused-task-title="focusedTask?.title ?? null"
-      />
-    </UCard>
+    <HabitStreakOverview compact />
+
+    <FocusStatsCharts
+      :stats="dailyStats"
+      :focused-task-title="focusedTask?.title ?? null"
+      :loading="isDailyStatsLoading"
+      :error="dailyStatsError"
+    />
   </div>
 </template>

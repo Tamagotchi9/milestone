@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/supabase', '@nuxt/ui', '@pinia/nuxt'],
+  modules: ['@nuxtjs/supabase', '@nuxt/ui', '@pinia/nuxt', 'nuxt-charts'],
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
@@ -10,6 +10,9 @@ export default defineNuxtConfig({
     },
   },
   css: ['~/assets/css/main.css'],
+  nuxtCharts: {
+    include: ['AreaChart', 'BarChart'],
+  },
   supabase: {
     redirectOptions: {
       login: '/auth/login',

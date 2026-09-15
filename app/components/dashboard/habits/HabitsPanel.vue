@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import HabitCalendar from '~/components/dashboard/habits/HabitCalendar.vue'
 import HabitEditorModal from '~/components/dashboard/habits/HabitEditorModal.vue'
 import HabitList from '~/components/dashboard/habits/HabitList.vue'
+import HabitStreakOverview from '~/components/dashboard/habits/HabitStreakOverview.vue'
 import type { CreateHabitInput, Habit } from '~/types/habits.types'
 
 const {
@@ -122,6 +123,8 @@ onMounted(() => {
     >
       {{ errorMessage }}
     </p>
+
+    <HabitStreakOverview />
 
     <div
       class="grid gap-6 lg:grid-cols-[minmax(15rem,0.75fr)_minmax(25rem,1.5fr)]"

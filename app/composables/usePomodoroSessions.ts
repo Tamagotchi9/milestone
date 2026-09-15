@@ -1,12 +1,22 @@
 import type { Database } from '~/types/database.types'
 import {
   EMPTY_POMODORO_STATS,
+  type PomodoroDailyStat,
   type PomodoroStats,
 } from '~/types/pomodoro.types'
 import { toFiniteNumber } from '~/utils/toFiniteNumber'
 
 const DEFAULT_DURATION_MINUTES = 25
 type ClosingReason = 'complete' | 'abandon'
+
+type FetchDailyStatsInput = {
+  today: string
+  timeZone: string
+  taskId?: string | null
+}
+
+type PomodoroDailyStatsRow =
+  Database['public']['Functions']['pomodoro_daily_stats']['Returns'][number]
 
 const mapStatsRow = (row: {
   completed_today: number | string
@@ -20,6 +30,14 @@ const mapStatsRow = (row: {
   secondsToday: toFiniteNumber(row.seconds_today),
   completedWeek: toFiniteNumber(row.completed_week),
   secondsWeek: toFiniteNumber(row.seconds_week),
+  completedForTask: toFiniteNumber(row.completed_for_task),
+  secondsForTask: toFiniteNumber(row.seconds_for_task),
+})
+
+const mapDailyStatsRow = (row: PomodoroDailyStatsRow): PomodoroDailyStat => ({
+  date: row.stat_date,
+  completedTotal: toFiniteNumber(row.completed_total),
+  secondsTotal: toFiniteNumber(row.seconds_total),
   completedForTask: toFiniteNumber(row.completed_for_task),
   secondsForTask: toFiniteNumber(row.seconds_for_task),
 })
@@ -39,6 +57,18 @@ export const usePomodoroSessions = () => {
   }))
   const statsError = useState<string | null>('pomodoro.statsError', () => null)
   const isStatsLoading = useState<boolean>('pomodoro.statsLoading', () => false)
+  const dailyStats = useState<PomodoroDailyStat[]>(
+    'pomodoro.dailyStats',
+    () => [],
+  )
+  const dailyStatsError = useState<string | null>(
+    'pomodoro.dailyStatsError',
+    () => null,
+  )
+  const isDailyStatsLoading = useState<boolean>(
+    'pomodoro.dailyStatsLoading',
+    () => false,
+  )
 
   const accumulatedSeconds = useState<number>(
     'pomodoro.accumulatedSeconds',
@@ -235,16 +265,46 @@ export const usePomodoroSessions = () => {
     stats.value = row ? mapStatsRow(row) : { ...EMPTY_POMODORO_STATS }
   }
 
+  const fetchDailyStats = async ({
+    today,
+    timeZone,
+    taskId = null,
+  }: FetchDailyStatsInput) => {
+    isDailyStatsLoading.value = true
+    dailyStatsError.value = null
+
+    const { data, error } = await supabase.rpc('pomodoro_daily_stats', {
+      p_today: today,
+      p_timezone: timeZone,
+      p_task_id: taskId,
+    })
+
+    isDailyStatsLoading.value = false
+
+    if (error) {
+      console.error('fetchDailyStats:', error.message)
+      dailyStats.value = []
+      dailyStatsError.value = error.message
+      return
+    }
+
+    dailyStats.value = (data ?? []).map(mapDailyStatsRow)
+  }
+
   return {
     currentSessionId,
     stats,
     statsError,
     isStatsLoading,
+    dailyStats,
+    dailyStatsError,
+    isDailyStatsLoading,
     startSession,
     pauseSession,
     resumeSession,
     completeSession,
     abandonSession,
     fetchStats,
+    fetchDailyStats,
   }
 }
