@@ -13,6 +13,13 @@ export type HabitStats = {
   eligibleDaysInMonth: number
 }
 
+export type HabitStreakStat = {
+  habitId: string
+  currentStreak: number
+  longestStreak: number
+  daysToBeatLongest: number
+}
+
 export type CreateHabitInput = {
   name: string
   startsOn: string

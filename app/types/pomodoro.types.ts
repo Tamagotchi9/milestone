@@ -16,6 +16,14 @@ export type PomodoroStats = {
   secondsForTask: number
 }
 
+export type PomodoroDailyStat = {
+  date: string
+  completedTotal: number
+  secondsTotal: number
+  completedForTask: number
+  secondsForTask: number
+}
+
 export const EMPTY_POMODORO_STATS: PomodoroStats = {
   completedToday: 0,
   secondsToday: 0,
