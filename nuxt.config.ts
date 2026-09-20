@@ -10,6 +10,11 @@ export default defineNuxtConfig({
     },
   },
   css: ['~/assets/css/main.css'],
+  vite: {
+    optimizeDeps: {
+      include: ['nuxt-charts > vccs > eventemitter3'],
+    },
+  },
   nuxtCharts: {
     include: ['AreaChart', 'BarChart'],
   },

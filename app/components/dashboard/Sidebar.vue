@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import milestoneLogo from '~/assets/images/logo/milestone-logo.png'
+import milestoneLogoBlack from '~/assets/images/logo/milestone-logo-black.png'
 
 const route = useRoute()
+const colorMode = useColorMode()
 const supabase = useSupabaseClient()
 const router = useRouter()
 const currentUserStore = useCurrentUserStore()
@@ -18,6 +20,10 @@ const userDisplayName = computed(() => {
 })
 const userInitial = computed(
   () => userDisplayName.value.charAt(0).toUpperCase() || 'A',
+)
+
+const logo = computed(() =>
+  colorMode.value === 'dark' ? milestoneLogo : milestoneLogoBlack,
 )
 
 const nav = [
@@ -97,7 +103,7 @@ const profileMenuItems = computed(() => [
       <div class="w-full px-4 py-3">
         <NuxtLink to="/dashboard" class="" aria-label="Milestone dashboard">
           <img
-            :src="milestoneLogo"
+            :src="logo"
             alt="Milestone"
             class="max-w-[150px] h-auto"
           />
