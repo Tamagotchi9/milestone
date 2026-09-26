@@ -9,6 +9,7 @@ const router = useRouter()
 const currentUserStore = useCurrentUserStore()
 const pomodoroRuntimeStore = usePomodoroRuntimeStore()
 const isSigningOut = ref(false)
+const mini = defineModel<boolean>('mini', { default: false })
 
 const userEmail = computed(() => currentUserStore.user?.email ?? 'Account')
 const userDisplayName = computed(() => {
@@ -92,7 +93,8 @@ const profileMenuItems = computed(() => [
 <template>
   <USidebar
     collapsible="none"
-    class="fixed inset-y-0 left-0 z-40 h-screen w-64 border-r border-default bg-elevated/80 shadow-sm backdrop-blur-xl"
+    class="fixed inset-y-0 left-0 z-40 h-screen overflow-hidden border-r border-default bg-elevated/80 shadow-sm backdrop-blur-xl transition-[width] duration-200"
+    :style="{ '--sidebar-width': mini ? '4rem' : '16rem' }"
     :ui="{
       header: 'border-0 p-0',
       body: 'flex flex-1 flex-col min-h-0 p-0',
@@ -100,27 +102,45 @@ const profileMenuItems = computed(() => [
     }"
   >
     <template #header>
-      <div class="w-full px-4 py-3">
-        <NuxtLink to="/dashboard" class="" aria-label="Milestone dashboard">
-          <img
-            :src="logo"
-            alt="Milestone"
-            class="max-w-[150px] h-auto"
-          />
+      <div
+        class="flex w-full items-center py-3"
+        :class="mini ? 'justify-center px-2' : 'justify-between px-4'"
+      >
+        <NuxtLink v-if="!mini" to="/dashboard" aria-label="Milestone dashboard">
+          <img :src="logo" alt="Milestone" class="h-auto max-w-[150px]" />
         </NuxtLink>
+        <button
+          type="button"
+          class="grid size-9 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-elevated hover:text-highlighted focus-visible:outline-2 focus-visible:outline-primary"
+          :aria-label="mini ? 'Expand sidebar' : 'Collapse sidebar'"
+          :title="mini ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="mini = !mini"
+        >
+          <UIcon
+            :name="
+              mini ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'
+            "
+            class="size-5"
+          />
+        </button>
       </div>
     </template>
 
-    <nav class="flex-1 min-h-0 p-3 space-y-1">
+    <nav class="min-h-0 flex-1 space-y-1" :class="mini ? 'p-2' : 'p-3'">
       <NuxtLink
         v-for="item in nav"
         :key="item.to"
         :to="item.to"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-elevated hover:text-highlighted transition-colors"
-        :class="isNavActive(item) ? '!bg-primary/10 !text-primary' : undefined"
+        class="flex items-center gap-3 rounded-lg py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+        :class="[
+          mini ? 'justify-center px-2' : 'px-3',
+          isNavActive(item) ? '!bg-primary/10 !text-primary' : undefined,
+        ]"
+        :aria-label="mini ? item.label : undefined"
+        :title="mini ? item.label : undefined"
       >
         <UIcon :name="item.icon" class="size-5 shrink-0" />
-        {{ item.label }}
+        <span v-if="!mini">{{ item.label }}</span>
       </NuxtLink>
     </nav>
 
@@ -138,7 +158,8 @@ const profileMenuItems = computed(() => [
           <template #default="{ open }">
             <button
               type="button"
-              class="flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors hover:bg-elevated focus-visible:bg-elevated"
+              class="flex w-full items-center gap-3 py-3 text-left outline-none transition-colors hover:bg-elevated focus-visible:bg-elevated"
+              :class="mini ? 'justify-center px-2' : 'px-4'"
               aria-label="Open profile menu"
             >
               <div
@@ -147,7 +168,7 @@ const profileMenuItems = computed(() => [
                 {{ userInitial }}
               </div>
 
-              <div class="min-w-0 flex-1">
+              <div v-if="!mini" class="min-w-0 flex-1">
                 <p
                   class="truncate text-sm font-semibold text-highlighted"
                   :title="userDisplayName"
@@ -160,6 +181,7 @@ const profileMenuItems = computed(() => [
               </div>
 
               <UIcon
+                v-if="!mini"
                 :name="open ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
                 class="size-4 shrink-0 text-muted"
               />

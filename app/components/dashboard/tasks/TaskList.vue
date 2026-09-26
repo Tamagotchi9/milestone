@@ -50,11 +50,14 @@ const pointer = ref({ x: 0, y: 0 })
 const announcement = ref('')
 const showCompleted = ref(false)
 let pointerId: number | null = null
-let dragHandle: HTMLElement | null = null
+let dragElement: HTMLElement | null = null
+let pendingDragTaskId: string | null = null
+let dragStart = { x: 0, y: 0 }
 let animationFrame = 0
 let pendingFocus: { taskId: string; key: string } | null = null
 const SCROLL_EDGE = 64
 const SCROLL_STEP = 12
+const DRAG_THRESHOLD = 6
 
 const sortTasks = (tasks: TaskItem[]) =>
   [...tasks].sort((a, b) => {
@@ -76,6 +79,14 @@ const groups = computed(() =>
       props.tasks.filter((task) => task.status === status.value),
     ),
   })),
+)
+
+const boardColumns = computed(() =>
+  groups.value
+    .map((group) =>
+      group.tasks.length ? 'minmax(0, 1fr)' : 'minmax(0, 0.55fr)',
+    )
+    .join(' '),
 )
 
 const completedTasks = computed(() =>
@@ -132,6 +143,15 @@ const moveTask = (taskId: string, status: TaskStatus) => {
   announcement.value = `Moving ${task.title} to ${TASK_STATUS_LABEL[status]}.`
 }
 
+const getMoveItems = (task: TaskItem) =>
+  statuses.map((status) => ({
+    label: TASK_STATUS_LABEL[status.value],
+    disabled:
+      task.status === status.value ||
+      props.updatingStatusIds?.includes(task.id),
+    onSelect: () => moveTask(task.id, status.value),
+  }))
+
 const findTarget = () => {
   const element = document
     .elementFromPoint(pointer.value.x, pointer.value.y)
@@ -175,34 +195,48 @@ const scrollWhileDragging = () => {
 
 const cancelDrag = () => {
   cancelAnimationFrame(animationFrame)
-  const handle = dragHandle
+  const element = dragElement
   const id = pointerId
   draggedTaskId.value = null
   targetStatus.value = null
   pointerId = null
-  dragHandle = null
-  if (id !== null && handle?.hasPointerCapture(id))
-    handle.releasePointerCapture(id)
+  dragElement = null
+  pendingDragTaskId = null
+  if (id !== null && element?.hasPointerCapture(id))
+    element.releasePointerCapture(id)
 }
 
 const startDrag = (event: PointerEvent, taskId: string) => {
   if (
     event.button !== 0 ||
-    draggedTaskId.value ||
+    pointerId !== null ||
+    (event.target instanceof Element &&
+      event.target.closest('[data-no-task-drag]')) ||
     props.updatingStatusIds?.includes(taskId)
   )
     return
-  dragHandle = event.currentTarget as HTMLElement
+  event.preventDefault()
+  dragElement = event.currentTarget as HTMLElement
   pointerId = event.pointerId
-  dragHandle.setPointerCapture(event.pointerId)
-  draggedTaskId.value = taskId
+  pendingDragTaskId = taskId
+  dragStart = { x: event.clientX, y: event.clientY }
+  dragElement.setPointerCapture(event.pointerId)
   pointer.value = { x: event.clientX, y: event.clientY }
-  scrollWhileDragging()
 }
 
 const moveDrag = (event: PointerEvent) => {
   if (event.pointerId !== pointerId) return
   pointer.value = { x: event.clientX, y: event.clientY }
+  if (
+    !draggedTaskId.value &&
+    pendingDragTaskId &&
+    Math.hypot(event.clientX - dragStart.x, event.clientY - dragStart.y) >=
+      DRAG_THRESHOLD
+  ) {
+    draggedTaskId.value = pendingDragTaskId
+    scrollWhileDragging()
+  }
+  if (!draggedTaskId.value) return
   findTarget()
 }
 
@@ -246,7 +280,7 @@ watch(
         {{ activeTaskCount === 1 ? 'task' : 'tasks' }} · Sorted by priority
       </p>
       <p id="task-move-help" class="mt-2 text-sm text-muted">
-        Drag the grip to change status, or use the Move to menu.
+        Drag a task card to change status, or use the Move to menu.
       </p>
     </div>
     <p class="sr-only" role="status">{{ announcement }}</p>
@@ -254,7 +288,10 @@ watch(
       ><p class="text-sm text-muted">Loading tasks…</p></UCard
     >
     <div v-else ref="board" class="space-y-4">
-      <div class="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div
+        class="grid items-start gap-4 md:grid-cols-2 xl:[grid-template-columns:var(--task-board-columns)]"
+        :style="{ '--task-board-columns': boardColumns }"
+      >
         <section
           v-for="group in groups"
           :key="group.value"
@@ -283,19 +320,23 @@ watch(
               group.tasks.length
             }}</span>
           </header>
-          <div class="min-h-28 space-y-3">
+          <div class="space-y-3" :class="group.tasks.length ? 'min-h-28' : ''">
             <DashboardTask
               v-for="task in group.tasks"
               :key="task.id"
               :task="task"
+              draggable
               :subtask-draft="subtaskDrafts[task.id]"
               :focused-task-id="focusedTaskId"
               :updating-status="updatingStatusIds?.includes(task.id)"
               :updating-priority="updatingPriorityIds?.includes(task.id)"
               :class="draggedTaskId === task.id ? 'opacity-50' : ''"
-              @change-status="
-                (taskId, status) => emit('changeStatus', taskId, status)
-              "
+              @pointerdown="startDrag($event, task.id)"
+              @pointermove="moveDrag"
+              @pointerup="finishDrag"
+              @pointercancel="cancelDrag"
+              @lostpointercapture="cancelDrag"
+              @dragstart.prevent
               @change-priority="
                 (taskId, priority) => emit('changePriority', taskId, priority)
               "
@@ -306,39 +347,11 @@ watch(
               @update:subtask-draft="(draft) => setSubtaskDraft(task.id, draft)"
             >
               <template #move>
-                <div class="ml-auto flex shrink-0 items-center gap-1">
-                  <button
-                    data-task-focus="drag-status"
-                    type="button"
-                    class="order-last flex size-9 touch-none items-center justify-center rounded-md text-dimmed hover:bg-elevated hover:text-default focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
-                    :class="
-                      draggedTaskId === task.id
-                        ? 'cursor-grabbing'
-                        : 'cursor-grab'
-                    "
-                    :disabled="updatingStatusIds?.includes(task.id)"
-                    :aria-label="`Drag ${task.title} to change status`"
-                    aria-describedby="task-move-help"
-                    @pointerdown="startDrag($event, task.id)"
-                    @pointermove="moveDrag"
-                    @pointerup="finishDrag"
-                    @pointercancel="cancelDrag"
-                    @lostpointercapture="cancelDrag"
-                    @dragstart.prevent
-                  >
-                    <UIcon name="i-lucide-grip-vertical" class="size-4" />
-                  </button>
-                  <UDropdownMenu
-                    :items="
-                      statuses.map((status) => ({
-                        label: TASK_STATUS_LABEL[status.value],
-                        disabled:
-                          task.status === status.value ||
-                          updatingStatusIds?.includes(task.id),
-                        onSelect: () => moveTask(task.id, status.value),
-                      }))
-                    "
-                  >
+                <div
+                  data-no-task-drag
+                  class="ml-auto flex shrink-0 cursor-auto items-center gap-1"
+                >
+                  <UDropdownMenu :items="getMoveItems(task)">
                     <UButton
                       data-task-focus="move-status"
                       color="neutral"
@@ -355,7 +368,7 @@ watch(
             </DashboardTask>
             <p
               v-if="!group.tasks.length"
-              class="rounded-lg border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+              class="rounded-lg border border-dashed border-default px-3 py-4 text-center text-sm text-muted"
             >
               Drop a task here
             </p>
@@ -391,9 +404,6 @@ watch(
             :focused-task-id="focusedTaskId"
             :updating-status="updatingStatusIds?.includes(task.id)"
             :updating-priority="updatingPriorityIds?.includes(task.id)"
-            @change-status="
-              (taskId, status) => emit('changeStatus', taskId, status)
-            "
             @change-priority="
               (taskId, priority) => emit('changePriority', taskId, priority)
             "
@@ -402,7 +412,27 @@ watch(
             @add-subtask="(payload) => emit('addSubtask', payload)"
             @toggle-subtask="(subtaskId) => emit('toggleSubtask', subtaskId)"
             @update:subtask-draft="(draft) => setSubtaskDraft(task.id, draft)"
-          />
+          >
+            <template #move>
+              <div
+                data-no-task-drag
+                class="ml-auto flex shrink-0 cursor-auto items-center gap-1"
+              >
+                <UDropdownMenu :items="getMoveItems(task)">
+                  <UButton
+                    data-task-focus="move-status"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    trailing-icon="i-lucide-chevron-down"
+                    :loading="updatingStatusIds?.includes(task.id)"
+                    :aria-label="`Move ${task.title} to status`"
+                    >Move to</UButton
+                  >
+                </UDropdownMenu>
+              </div>
+            </template>
+          </DashboardTask>
           <p
             v-if="!completedTasks.length"
             class="rounded-lg border border-dashed border-default px-3 py-8 text-center text-sm text-muted"

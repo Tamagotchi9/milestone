@@ -3,11 +3,9 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import {
   TASK_PRIORITY_LABEL,
   TASK_STATUS,
-  TASK_STATUS_LABEL,
   type CreateTaskDTO,
   type TaskItem,
   type TaskPriority,
-  type TaskStatus,
 } from '~/types/tasks.types'
 
 const props = defineProps<{
@@ -15,6 +13,7 @@ const props = defineProps<{
   focusedTaskId: string | null
   updatingStatus?: boolean
   updatingPriority?: boolean
+  draggable?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -22,36 +21,16 @@ const emit = defineEmits<{
   remove: [taskId: string]
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
-  changeStatus: [taskId: string, status: TaskStatus]
   changePriority: [taskId: string, priority: TaskPriority]
 }>()
 
 const newSubtaskTitle = defineModel<string>('subtaskDraft', { default: '' })
-
-const statusBadgeColor = {
-  created: 'neutral',
-  in_progress: 'primary',
-  completed: 'success',
-  on_hold: 'warning',
-  blocked: 'error',
-  abandoned: 'neutral',
-} as const
 
 const priorityBadgeColor = {
   high: 'error',
   medium: 'warning',
   low: 'success',
 } as const
-
-const statusItems = computed<DropdownMenuItem[]>(() =>
-  Object.values(TASK_STATUS).map((status) => ({
-    label: TASK_STATUS_LABEL[status],
-    color: statusBadgeColor[status],
-    icon: props.task.status === status ? 'i-lucide-check' : undefined,
-    disabled: props.updatingStatus || props.task.status === status,
-    onSelect: () => emit('changeStatus', props.task.id, status),
-  })),
-)
 
 const priorityItems = computed<DropdownMenuItem[]>(() =>
   (['high', 'medium', 'low'] as const).map((priority) => ({
@@ -90,28 +69,18 @@ const formattedDeadline = computed(() =>
   <UCard
     :data-task-card-id="task.id"
     class="overflow-hidden rounded-xl transition-shadow duration-200 hover:shadow-md"
-    :class="focusedTaskId === task.id ? 'ring-2 ring-primary/40' : ''"
+    :class="[
+      focusedTaskId === task.id ? 'ring-2 ring-primary/40' : '',
+      draggable ? 'cursor-grab touch-none active:cursor-grabbing' : '',
+    ]"
     :ui="{ body: 'p-4 sm:p-4' }"
   >
     <article class="space-y-4">
       <header class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
-          <UDropdownMenu :items="statusItems">
-            <UButton
-              data-task-focus="status"
-              :color="statusBadgeColor[task.status]"
-              variant="soft"
-              size="xs"
-              class="rounded-full"
-              trailing-icon="i-lucide-chevron-down"
-              :disabled="updatingStatus"
-              :aria-label="`Change status for ${task.title}: ${TASK_STATUS_LABEL[task.status]}`"
-            >
-              {{ TASK_STATUS_LABEL[task.status] }}
-            </UButton>
-          </UDropdownMenu>
           <UDropdownMenu :items="priorityItems">
             <UButton
+              data-no-task-drag
               data-task-focus="priority"
               :color="priorityBadgeColor[task.priority]"
               variant="soft"
@@ -161,7 +130,10 @@ const formattedDeadline = computed(() =>
         </div>
       </div>
 
-      <div class="space-y-3 rounded-lg bg-elevated/50 p-3">
+      <div
+        data-no-task-drag
+        class="cursor-auto space-y-3 rounded-lg bg-elevated/50 p-3"
+      >
         <div
           v-if="task.subtasks.length"
           class="flex items-center justify-between text-xs"
@@ -222,7 +194,10 @@ const formattedDeadline = computed(() =>
         </form>
       </div>
 
-      <footer class="flex items-center gap-2 border-t border-default pt-3">
+      <footer
+        data-no-task-drag
+        class="flex cursor-auto items-center gap-2 border-t border-default pt-3"
+      >
         <UButton
           data-task-focus="start-focus"
           size="sm"
