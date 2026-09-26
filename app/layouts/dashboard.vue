@@ -5,6 +5,7 @@ import DashboardSidebar from '~/components/dashboard/Sidebar.vue'
 
 const pomodoroRuntimeStore = usePomodoroRuntimeStore()
 const { isRunning, runningTabTitle } = storeToRefs(pomodoroRuntimeStore)
+const isSidebarMini = ref(false)
 
 useHead(() => ({
   title: isRunning.value ? runningTabTitle.value : undefined,
@@ -22,9 +23,10 @@ onBeforeUnmount(() => {
 <template>
   <UApp>
     <div class="h-screen overflow-hidden bg-default">
-      <DashboardSidebar />
+      <DashboardSidebar v-model:mini="isSidebarMini" />
       <main
-        class="ml-64 h-screen min-w-0 overflow-y-auto overscroll-contain scroll-smooth"
+        class="h-screen min-w-0 overflow-y-auto overscroll-contain scroll-smooth transition-[margin-left] duration-200"
+        :class="isSidebarMini ? 'ml-16' : 'ml-64'"
       >
         <slot />
       </main>

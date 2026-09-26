@@ -130,21 +130,22 @@ describe('task status sections', () => {
         vi.fn(() => 1),
       )
       vi.stubGlobal('cancelAnimationFrame', vi.fn())
-      const handle = wrapper.find('button[aria-describedby="task-move-help"]')
-      Object.assign(handle.element, {
+      const card = wrapper.find('[data-task-id="task-1"]')
+      Object.assign(card.element, {
         setPointerCapture: vi.fn(),
         hasPointerCapture: () => false,
       })
-      const event = {
+      const startEvent = {
         button: 0,
         pointerId: 1,
         pointerType,
         clientX: 100,
         clientY: 200,
       }
-      await handle.trigger('pointerdown', event)
-      await handle.trigger('pointermove', event)
-      await handle.trigger('pointerup', event)
+      const moveEvent = { ...startEvent, clientX: 112 }
+      await card.trigger('pointerdown', startEvent)
+      await card.trigger('pointermove', moveEvent)
+      await card.trigger('pointerup', moveEvent)
       expect(wrapper.emitted('changeStatus')).toEqual([['task-1', 'blocked']])
       wrapper.unmount()
     },
@@ -166,18 +167,19 @@ describe('task status sections', () => {
         vi.fn(() => 1),
       )
       vi.stubGlobal('cancelAnimationFrame', vi.fn())
-      const handle = wrapper.find('button[aria-describedby="task-move-help"]')
-      Object.assign(handle.element, {
+      const card = wrapper.find('[data-task-id="task-1"]')
+      Object.assign(card.element, {
         setPointerCapture: vi.fn(),
         hasPointerCapture: () => false,
       })
-      const event = { button: 0, pointerId: 1, clientX: 100, clientY: 200 }
-      await handle.trigger('pointerdown', event)
-      if (action === 'escape')
-        await handle.trigger('keydown', { key: 'Escape' })
+      const startEvent = { button: 0, pointerId: 1, clientX: 100, clientY: 200 }
+      const moveEvent = { ...startEvent, clientX: 112 }
+      await card.trigger('pointerdown', startEvent)
+      await card.trigger('pointermove', moveEvent)
+      if (action === 'escape') await card.trigger('keydown', { key: 'Escape' })
       else if (action !== 'outside' && action !== 'same')
-        await handle.trigger(action, event)
-      await handle.trigger('pointerup', event)
+        await card.trigger(action, moveEvent)
+      await card.trigger('pointerup', moveEvent)
       expect(wrapper.emitted('changeStatus')).toBeUndefined()
       wrapper.unmount()
     },
@@ -185,11 +187,11 @@ describe('task status sections', () => {
 
   it('disables movement while a status update is pending', async () => {
     const wrapper = await mountBoard([makeTask()], ['task-1'])
-    expect(
-      wrapper
-        .find('button[aria-describedby="task-move-help"]')
-        .attributes('disabled'),
-    ).toBeDefined()
+    const card = wrapper.find('[data-task-id="task-1"]')
+    Object.assign(card.element, { setPointerCapture: vi.fn() })
+    const event = { button: 0, pointerId: 1, clientX: 100, clientY: 200 }
+    await card.trigger('pointerdown', event)
+    expect(card.element.setPointerCapture).not.toHaveBeenCalled()
     const button = wrapper
       .findAll('button')
       .find((item) => item.text() === 'In progress')!
