@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 import {
+  TASK_PRIORITY_LABEL,
   TASK_STATUS,
+  TASK_STATUS_LABEL,
   type CreateTaskDTO,
   type TaskItem,
+  type TaskPriority,
   type TaskStatus,
 } from '~/types/tasks.types'
 
@@ -11,6 +14,7 @@ const props = defineProps<{
   task: TaskItem
   focusedTaskId: string | null
   updatingStatus?: boolean
+  updatingPriority?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +23,7 @@ const emit = defineEmits<{
   addSubtask: [payload: CreateTaskDTO]
   toggleSubtask: [subtaskId: string]
   changeStatus: [taskId: string, status: TaskStatus]
+  changePriority: [taskId: string, priority: TaskPriority]
 }>()
 
 const newSubtaskTitle = defineModel<string>('subtaskDraft', { default: '' })
@@ -32,22 +37,29 @@ const statusBadgeColor = {
   abandoned: 'neutral',
 } as const
 
-const statusLabel: Record<TaskStatus, string> = {
-  created: 'To do',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  on_hold: 'On hold',
-  blocked: 'Blocked',
-  abandoned: 'Abandoned',
-}
+const priorityBadgeColor = {
+  high: 'error',
+  medium: 'warning',
+  low: 'success',
+} as const
 
 const statusItems = computed<DropdownMenuItem[]>(() =>
   Object.values(TASK_STATUS).map((status) => ({
-    label: statusLabel[status],
+    label: TASK_STATUS_LABEL[status],
     color: statusBadgeColor[status],
     icon: props.task.status === status ? 'i-lucide-check' : undefined,
     disabled: props.updatingStatus || props.task.status === status,
     onSelect: () => emit('changeStatus', props.task.id, status),
+  })),
+)
+
+const priorityItems = computed<DropdownMenuItem[]>(() =>
+  (['high', 'medium', 'low'] as const).map((priority) => ({
+    label: TASK_PRIORITY_LABEL[priority],
+    color: priorityBadgeColor[priority],
+    icon: props.task.priority === priority ? 'i-lucide-check' : undefined,
+    disabled: props.updatingPriority || props.task.priority === priority,
+    onSelect: () => emit('changePriority', props.task.id, priority),
   })),
 )
 
@@ -83,20 +95,36 @@ const formattedDeadline = computed(() =>
   >
     <article class="space-y-4">
       <header class="flex flex-wrap items-center justify-between gap-2">
-        <UDropdownMenu :items="statusItems">
-          <UButton
-            data-task-focus="status"
-            :color="statusBadgeColor[task.status]"
-            variant="soft"
-            size="xs"
-            class="rounded-full"
-            trailing-icon="i-lucide-chevron-down"
-            :disabled="updatingStatus"
-            :aria-label="`Change status for ${task.title}: ${statusLabel[task.status]}`"
-          >
-            {{ statusLabel[task.status] }}
-          </UButton>
-        </UDropdownMenu>
+        <div class="flex flex-wrap items-center gap-2">
+          <UDropdownMenu :items="statusItems">
+            <UButton
+              data-task-focus="status"
+              :color="statusBadgeColor[task.status]"
+              variant="soft"
+              size="xs"
+              class="rounded-full"
+              trailing-icon="i-lucide-chevron-down"
+              :disabled="updatingStatus"
+              :aria-label="`Change status for ${task.title}: ${TASK_STATUS_LABEL[task.status]}`"
+            >
+              {{ TASK_STATUS_LABEL[task.status] }}
+            </UButton>
+          </UDropdownMenu>
+          <UDropdownMenu :items="priorityItems">
+            <UButton
+              data-task-focus="priority"
+              :color="priorityBadgeColor[task.priority]"
+              variant="soft"
+              size="xs"
+              class="rounded-full"
+              trailing-icon="i-lucide-chevron-down"
+              :disabled="updatingPriority"
+              :aria-label="`Change priority for ${task.title}: ${TASK_PRIORITY_LABEL[task.priority]}`"
+            >
+              {{ TASK_PRIORITY_LABEL[task.priority] }}
+            </UButton>
+          </UDropdownMenu>
+        </div>
         <slot name="move" />
       </header>
 
