@@ -26,7 +26,7 @@ const mountBoard = (tasks: TaskItem[]) =>
     },
   })
 
-describe('task priority integration', () => {
+describe('task status integration', () => {
   it('preserves the subtask draft and keyboard focus during an optimistic move and rollback', async () => {
     const task = reactive(makeTask())
     const wrapper = await mountBoard([task])
@@ -39,7 +39,7 @@ describe('task priority integration', () => {
     input.element.focus()
     expect(document.activeElement).toBe(input.element)
 
-    task.priority = 'low'
+    task.status = 'in_progress'
     await nextTick()
 
     const inputAfterOptimisticMove =
@@ -47,7 +47,7 @@ describe('task priority integration', () => {
     expect(inputAfterOptimisticMove.element.value).toBe(draft)
     expect(document.activeElement).toBe(inputAfterOptimisticMove.element)
 
-    task.priority = 'high'
+    task.status = 'created'
     await nextTick()
 
     const inputAfterRollback = wrapper.find<HTMLInputElement>(inputSelector)
