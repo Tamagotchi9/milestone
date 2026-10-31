@@ -1,34 +1,19 @@
-import js from '@eslint/js'
-import pluginVue from 'eslint-plugin-vue'
-import prettierConfig from 'eslint-config-prettier'
-import tseslint from 'typescript-eslint'
-import vueParser from 'vue-eslint-parser'
+import { defineConfig, globalIgnores } from 'eslint/config'
+import nextVitals from 'eslint-config-next/core-web-vitals'
+import nextTs from 'eslint-config-next/typescript'
+import prettier from 'eslint-config-prettier/flat'
 
-export default [
-  {
-    ignores: ['.nuxt/**', '.output/**', 'dist/**', 'node_modules/**'],
-  },
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
-  ...pluginVue.configs['flat/recommended'],
-  prettierConfig,
-  {
-    files: ['**/*.vue'],
-    languageOptions: {
-      parser: vueParser,
-      parserOptions: {
-        parser: tseslint.parser,
-        extraFileExtensions: ['.vue'],
-      },
-    },
-  },
-  {
-    files: ['**/*.{js,mjs,cjs,ts,vue}'],
-    rules: {
-      semi: ['error', 'never'],
-      quotes: ['error', 'single', { avoidEscape: true }],
-      'no-undef': 'off',
-      'vue/multi-word-component-names': 'off',
-    },
-  },
-]
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  prettier,
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'drizzle/**',
+    'next-env.d.ts',
+  ]),
+])
+
+export default eslintConfig

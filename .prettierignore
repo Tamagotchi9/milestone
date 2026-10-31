@@ -1,6 +1,6 @@
-.nuxt
-.output
-dist
+.next
 node_modules
 .agents
+drizzle
 pnpm-lock.yaml
+next-env.d.ts
