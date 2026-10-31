@@ -13,7 +13,10 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "db:pull": "drizzle-kit pull"
+    "db:migrate": "drizzle-kit migrate",
+    "db:migration": "drizzle-kit generate --custom --name",
+    "db:test": "./scripts/db-test.sh",
+    "db:pull": "drizzle-kit pull --config=drizzle.pull.config.ts && cp .drizzle-pull/schema.ts .drizzle-pull/relations.ts src/db/ && rm -rf .drizzle-pull && prettier --write src/db"
   },
   "dependencies": {
     "@neon/auth": "^0.8.2",

@@ -1,0 +1,17 @@
+import 'dotenv/config'
+import { defineConfig } from 'drizzle-kit'
+
+// Generates TypeScript from the live schema. SQL migrations in drizzle/ stay the source of truth.
+export default defineConfig({
+  dialect: 'postgresql',
+  out: './.drizzle-pull',
+  schemaFilter: ['public', 'neon_auth'],
+  tablesFilter: [
+    'tasks',
+    'habits',
+    'habit_checkins',
+    'pomodoro_sessions',
+    'user',
+  ],
+  dbCredentials: { url: process.env.DATABASE_URL_UNPOOLED! },
+})

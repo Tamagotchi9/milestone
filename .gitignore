@@ -5,6 +5,9 @@
 next-env.d.ts
 *.tsbuildinfo
 
+# Drizzle pull output
+/.drizzle-pull/
+
 # Node dependencies
 node_modules
 

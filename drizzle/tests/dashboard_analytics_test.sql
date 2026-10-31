@@ -1,16 +1,19 @@
 begin;
 
-create extension if not exists pgtap with schema extensions;
+create extension if not exists pgtap;
+
+-- Rolled back with the test; lets the owner run as the app role below.
+grant authenticated to current_user with inherit false, set true;
 
 select plan(9);
 
-insert into auth.users (id, email)
+insert into neon_auth."user" (id, name, email, "emailVerified")
 values
-  ('00000000-0000-0000-0000-000000000101', 'analytics-one@example.com'),
-  ('00000000-0000-0000-0000-000000000102', 'analytics-two@example.com');
+  ('00000000-0000-0000-0000-000000000101', 'One', 'analytics-one@example.com', true),
+  ('00000000-0000-0000-0000-000000000102', 'Two', 'analytics-two@example.com', true);
 
 set local role authenticated;
-set local "request.jwt.claim.sub" = '00000000-0000-0000-0000-000000000101';
+set local "request.jwt.claims" = '{"sub":"00000000-0000-0000-0000-000000000101"}';
 
 insert into public.tasks (id, title)
 values
@@ -102,7 +105,7 @@ values
   ('20000000-0000-0000-0000-000000000103', '2026-09-14');
 
 reset role;
-set local "request.jwt.claim.sub" = '00000000-0000-0000-0000-000000000102';
+set local "request.jwt.claims" = '{"sub":"00000000-0000-0000-0000-000000000102"}';
 set local role authenticated;
 
 insert into public.pomodoro_sessions (
@@ -128,7 +131,7 @@ values (
 );
 
 reset role;
-set local "request.jwt.claim.sub" = '00000000-0000-0000-0000-000000000101';
+set local "request.jwt.claims" = '{"sub":"00000000-0000-0000-0000-000000000101"}';
 set local role authenticated;
 
 select results_eq(

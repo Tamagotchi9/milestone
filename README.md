@@ -19,7 +19,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-App runs on `http://localhost:3000`. `neon deploy` pulls the Neon variables into `.env`; generate `NEON_AUTH_COOKIE_SECRET` yourself with `openssl rand -base64 32`. `pnpm db:pull` generates `drizzle/schema.ts` from the database in `DATABASE_URL_UNPOOLED`.
+App runs on `http://localhost:3000`. `neon deploy` pulls the Neon variables into `.env`; generate `NEON_AUTH_COOKIE_SECRET` yourself with `openssl rand -base64 32`. See [Database](#database) for `DATABASE_AUTHENTICATED_URL`.
 
 ## Scripts
 
@@ -30,8 +30,19 @@ App runs on `http://localhost:3000`. `neon deploy` pulls the Neon variables into
 - `pnpm lint` - run ESLint
 - `pnpm typecheck` - run the TypeScript compiler
 - `pnpm format` - format with Prettier
-- `pnpm db:pull` - generate the Drizzle schema from the database
+- `pnpm db:migration <name>` - create an empty SQL migration
+- `pnpm db:migrate` - apply migrations to `DATABASE_URL_UNPOOLED`
+- `pnpm db:pull` - regenerate `src/db/schema.ts` and `relations.ts` from the database
+- `pnpm db:test` - run the pgTAP tests in `drizzle/tests`
 
 ## Database
 
-`supabase/migrations` and `supabase/tests` hold the source SQL and pgTAP tests to adapt for Neon.
+SQL migrations in `drizzle/` are the source of truth, because RLS policies, triggers and functions live there. `src/db/schema.ts` is generated from the database with `pnpm db:pull`: do not edit it by hand, and do not use `drizzle-kit generate` without `--custom`.
+
+The app connects as `authenticated_backend`, which is subject to RLS. Policies read the user from `auth.uid()`, which returns the `sub` claim of `request.jwt.claims`, so queries must set that claim inside a transaction after verifying the Neon Auth JWT. Without it, queries see no rows.
+
+Migrations create the role without login. After migrating a new project, enable it once and put the matching pooled URL into `DATABASE_AUTHENTICATED_URL`:
+
+```sql
+alter role authenticated_backend login password '<openssl rand -hex 32>';
+```

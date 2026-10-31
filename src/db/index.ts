@@ -3,7 +3,14 @@ import { attachDatabasePool } from '@vercel/functions'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const connectionString = process.env.DATABASE_AUTHENTICATED_URL
+
+// pg silently falls back to PG* variables, which could bypass RLS.
+if (!connectionString) {
+  throw new Error('DATABASE_AUTHENTICATED_URL is not set')
+}
+
+const pool = new Pool({ connectionString })
 
 pool.on('error', (error) => {
   console.error('Unexpected Postgres pool error', error)
