@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { defineConfig } from 'drizzle-kit'
+import { withVerifiedTls } from './src/db/connection-string'
 
 // Generates TypeScript from the live schema. SQL migrations in drizzle/ stay the source of truth.
 export default defineConfig({
@@ -13,5 +14,5 @@ export default defineConfig({
     'pomodoro_sessions',
     'user',
   ],
-  dbCredentials: { url: process.env.DATABASE_URL_UNPOOLED! },
+  dbCredentials: { url: withVerifiedTls(process.env.DATABASE_URL_UNPOOLED!) },
 })
