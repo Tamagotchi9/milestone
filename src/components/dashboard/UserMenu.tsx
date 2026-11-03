@@ -1,12 +1,12 @@
 import { ChevronsUpDown } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { auth } from '@/lib/auth/server'
-import { getUserInitials } from '@/lib/user-initials'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import UserMenuDropdown from '@/components/dashboard/UserMenuDropdown'
+import UserMenuInfo from '@/components/dashboard/UserMenuInfo'
 
 const UserMenu = async () => {
   const { data: session } = await auth.getSession()
@@ -18,21 +18,20 @@ const UserMenu = async () => {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton size="lg">
-          <Avatar>
-            <AvatarImage src={session.user.image ?? undefined} alt="" />
-            <AvatarFallback>
-              {getUserInitials(session.user.name || session.user.email)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="grid flex-1 leading-tight">
-            <span className="truncate font-medium">{session.user.name}</span>
-            <span className="truncate text-xs text-muted-foreground">
-              {session.user.email}
-            </span>
-          </span>
-          <ChevronsUpDown className="ml-auto" />
-        </SidebarMenuButton>
+        <UserMenuDropdown
+          name={session.user.name}
+          email={session.user.email}
+          image={session.user.image}
+        >
+          <SidebarMenuButton size="lg">
+            <UserMenuInfo
+              name={session.user.name}
+              email={session.user.email}
+              image={session.user.image}
+            />
+            <ChevronsUpDown className="ml-auto" />
+          </SidebarMenuButton>
+        </UserMenuDropdown>
       </SidebarMenuItem>
     </SidebarMenu>
   )
