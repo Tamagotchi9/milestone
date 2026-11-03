@@ -2,7 +2,7 @@ import 'server-only'
 import { attachDatabasePool } from '@vercel/functions'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
-import { withVerifiedTls } from './connection-string'
+import { withVerifiedTls } from '@/db/connection-string'
 
 const connectionString = process.env.DATABASE_AUTHENTICATED_URL
 

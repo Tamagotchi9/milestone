@@ -6,8 +6,8 @@ import {
 } from '@/components/ui/sidebar'
 import NavLinks from '@/components/dashboard/NavLinks'
 import { Suspense } from 'react'
-import UserMenu from './UserMenu'
-import UserMenuSkeleton from './UserMenuSkeleton'
+import UserMenu from '@/components/dashboard/UserMenu'
+import UserMenuSkeleton from '@/components/dashboard/UserMenuSkeleton'
 
 const AppSidebar = () => {
   return (
