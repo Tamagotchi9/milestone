@@ -1,7 +1,9 @@
 import { usePathname } from 'next/navigation'
-import { describe, it, vi, expect, beforeEach } from 'vitest'
+import { describe, it, vi, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import NavLinks from './NavLinks'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
@@ -14,35 +16,39 @@ const routes = [
   { name: 'Habits', href: '/dashboard/habits' },
 ]
 
-beforeEach(() => {
-  vi.mocked(usePathname).mockReturnValue('/dashboard')
-})
+const Providers = ({ children }: { children: React.ReactNode }) => (
+  <TooltipProvider>
+    <SidebarProvider>{children}</SidebarProvider>
+  </TooltipProvider>
+)
+
+const renderNavLinks = (href: string = '/dashboard') => {
+  vi.mocked(usePathname).mockReturnValue(href)
+  render(<NavLinks />, { wrapper: Providers })
+}
 
 describe('NavLinks', () => {
   it.each(routes)('links $name to its $href', ({ name, href }) => {
-    render(<NavLinks />)
+    renderNavLinks()
 
     const link = screen.getByRole('link', { name })
 
     expect(link).toHaveAttribute('href', href)
   })
   it.each(routes)('marks $name as active on $href', ({ name, href }) => {
-    vi.mocked(usePathname).mockReturnValue(href)
-    render(<NavLinks />)
+    renderNavLinks(href)
     const link = screen.getByRole('link', { name })
 
     expect(link).toHaveAttribute('aria-current', 'page')
   })
   it('marks only one link as active', () => {
-    vi.mocked(usePathname).mockReturnValue('/dashboard/tasks')
-    render(<NavLinks />)
+    renderNavLinks('/dashboard/tasks')
 
     const links = screen.getAllByRole('link', { current: 'page' })
     expect(links).toHaveLength(1)
   })
   it('marks no link as active on an unknown page', () => {
-    vi.mocked(usePathname).mockReturnValue('/dashboard/unknown')
-    render(<NavLinks />)
+    renderNavLinks('/dashboard/unknown')
 
     const link = screen.queryByRole('link', { current: 'page' })
     expect(link).not.toBeInTheDocument()
