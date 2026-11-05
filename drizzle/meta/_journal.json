@@ -15,6 +15,13 @@
       "when": 1793446274446,
       "tag": "0001_same_owner_task_links",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793912395420,
+      "tag": "0002_tasks_updated_at",
+      "breakpoints": true
     }
   ]
 }
