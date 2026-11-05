@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
@@ -8,5 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Integration tests need a database; they run with pnpm test:integration.
+    exclude: [...configDefaults.exclude, 'src/**/*.integration.test.ts'],
   },
 })

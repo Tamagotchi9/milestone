@@ -8,6 +8,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "next typegen && tsc --noEmit",
