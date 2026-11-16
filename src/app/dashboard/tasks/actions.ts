@@ -7,6 +7,8 @@ import { parseTaskForm } from '@/lib/tasks/parse-task-form'
 import { CreateTaskState } from '@/types/tasks'
 import { getString } from '@/lib/tasks/get-string'
 import { initialCreateTaskState } from '@/lib/tasks/initial-create-task-state'
+import { eq } from 'drizzle-orm'
+import { isUuid } from '@/lib/is-uuid'
 
 export const createTask = async (
   _prevState: CreateTaskState,
@@ -31,4 +33,10 @@ export const createTask = async (
     ...initialCreateTaskState,
     status: 'success',
   }
+}
+
+export const deleteTask = async (id: unknown) => {
+  if (!isUuid(id)) return
+  await withUserDb((tx) => tx.delete(tasks).where(eq(tasks.id, id)))
+  refresh()
 }
