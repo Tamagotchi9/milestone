@@ -2,9 +2,10 @@ import { CalendarIcon } from 'lucide-react'
 import { cn } from 'cn'
 import type { Task } from '@/db/types'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { formatDeadline } from '@/lib/tasks/format-deadline'
 import { TASK_PRIORITY_LABEL, TASK_STATUS_LABEL } from '@/lib/tasks/labels'
+import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog'
 
 const priorityClassName: Record<Task['priority'], string> = {
   high: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
@@ -14,7 +15,10 @@ const priorityClassName: Record<Task['priority'], string> = {
 }
 
 interface TaskCardProps {
-  task: Pick<Task, 'title' | 'description' | 'priority' | 'status' | 'deadline'>
+  task: Pick<
+    Task,
+    'id' | 'title' | 'description' | 'priority' | 'status' | 'deadline'
+  >
 }
 
 const TaskCard = ({ task }: TaskCardProps) => {
@@ -46,6 +50,9 @@ const TaskCard = ({ task }: TaskCardProps) => {
           </p>
         )}
       </CardContent>
+      <CardFooter className="justify-end py-2">
+        <DeleteTaskDialog taskId={task.id} taskTitle={task.title} />
+      </CardFooter>
     </Card>
   )
 }
