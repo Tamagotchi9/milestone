@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { createTask } from '@/app/dashboard/tasks/actions'
-import { Button } from '@/components/ui/button'
+import LoadingButton from '@/components/LoadingButton'
 import {
   Field,
   FieldDescription,
@@ -56,9 +56,14 @@ const TaskForm = ({ onSuccess }: TaskFormProps) => {
           </Field>
         </FieldGroup>
       </FieldSet>
-      <Button type="submit" disabled={isPending} className="mt-5">
-        {isPending ? 'Creating...' : 'Create'}
-      </Button>
+      <LoadingButton
+        type="submit"
+        loading={isPending}
+        loadingText="Creating..."
+        className="mt-5"
+      >
+        Create
+      </LoadingButton>
     </form>
   )
 }
