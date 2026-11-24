@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { formatDeadline } from '@/lib/tasks/format-deadline'
 import { TASK_PRIORITY_LABEL, TASK_STATUS_LABEL } from '@/lib/tasks/labels'
 import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog'
+import UpdateTaskDialog from '@/components/tasks/UpdateTaskDialog'
 
 const priorityClassName: Record<Task['priority'], string> = {
   high: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
@@ -51,6 +52,7 @@ const TaskCard = ({ task }: TaskCardProps) => {
         )}
       </CardContent>
       <CardFooter className="justify-end py-2">
+        <UpdateTaskDialog task={task} />
         <DeleteTaskDialog taskId={task.id} taskTitle={task.title} />
       </CardFooter>
     </Card>

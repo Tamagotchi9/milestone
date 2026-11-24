@@ -1,7 +1,15 @@
-import { CreateTaskState } from '@/types/tasks'
+import { TaskFormState } from '@/types/tasks'
 
-export const initialCreateTaskState: CreateTaskState = {
+interface InitialValues {
+  title?: string
+  description?: string | null
+}
+
+export const initialCreateTaskState = ({
+  title = '',
+  description = '',
+}: InitialValues): TaskFormState => ({
   status: 'idle',
   errors: {},
-  values: { title: '', description: '' },
-}
+  values: { title, description: description ?? '' },
+})

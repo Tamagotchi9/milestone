@@ -4,16 +4,16 @@ import { withUserDb } from '@/db/with-user-db'
 import { tasks } from '@/db/schema'
 import { refresh } from 'next/cache'
 import { parseTaskForm } from '@/lib/tasks/parse-task-form'
-import { CreateTaskState } from '@/types/tasks'
+import { TaskFormState } from '@/types/tasks'
 import { getString } from '@/lib/tasks/get-string'
 import { initialCreateTaskState } from '@/lib/tasks/initial-create-task-state'
 import { eq } from 'drizzle-orm'
 import { isUuid } from '@/lib/is-uuid'
 
 export const createTask = async (
-  _prevState: CreateTaskState,
+  _prevState: TaskFormState,
   formData: FormData,
-): Promise<CreateTaskState> => {
+): Promise<TaskFormState> => {
   const parsedFormData = parseTaskForm(formData)
 
   if (!parsedFormData.ok)
@@ -30,7 +30,40 @@ export const createTask = async (
   )
   refresh()
   return {
-    ...initialCreateTaskState,
+    ...initialCreateTaskState({}),
+    status: 'success',
+  }
+}
+
+export const updateTask = async (
+  id: unknown,
+  _prevState: TaskFormState,
+  formData: FormData,
+): Promise<TaskFormState> => {
+  if (!isUuid(id)) {
+    throw new Error('Invalid task id')
+  }
+
+  const parsedFormData = parseTaskForm(formData)
+  if (!parsedFormData.ok)
+    return {
+      status: 'error',
+      errors: parsedFormData.errors,
+      values: {
+        title: getString(formData.get('title')),
+        description: getString(formData.get('description')),
+      },
+    }
+
+  await withUserDb((tx) =>
+    tx.update(tasks).set(parsedFormData.data).where(eq(tasks.id, id)),
+  )
+  refresh()
+  return {
+    ...initialCreateTaskState({
+      title: parsedFormData.data.title,
+      description: parsedFormData.data.description ?? '',
+    }),
     status: 'success',
   }
 }

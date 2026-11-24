@@ -1,4 +1,5 @@
 'use client'
+import { createTask } from '@/app/dashboard/tasks/actions'
 import TaskForm from '@/components/tasks/TaskForm'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +22,13 @@ const CreateTaskDialog = () => {
         <DialogHeader>
           <DialogTitle>Create a task</DialogTitle>
         </DialogHeader>
-        <TaskForm onSuccess={() => setOpen(false)} />
+        <TaskForm
+          onSuccess={() => setOpen(false)}
+          action={createTask}
+          formDescription="Create a new task for yourself"
+          submitText="Create"
+          submitLoadingText="Creating..."
+        />
       </DialogContent>
     </Dialog>
   )

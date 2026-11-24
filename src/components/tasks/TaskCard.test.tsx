@@ -6,6 +6,7 @@ import TaskCard from '@/components/tasks/TaskCard'
 // next/headers. The card tests only check rendering.
 vi.mock('@/app/dashboard/tasks/actions', () => ({
   deleteTask: vi.fn(),
+  updateTask: vi.fn(),
 }))
 
 const task = {

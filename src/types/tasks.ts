@@ -10,7 +10,7 @@ export type ParseResult =
   | { ok: true; data: Pick<NewTask, 'title' | 'description'> }
   | { ok: false; errors: TaskFieldErrors }
 
-export type CreateTaskState = {
+export type TaskFormState = {
   status: 'idle' | 'success' | 'error'
   errors: TaskFieldErrors
   values: TaskFieldValues
