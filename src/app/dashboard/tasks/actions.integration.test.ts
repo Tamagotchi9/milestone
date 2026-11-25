@@ -9,7 +9,11 @@ import {
 import { withClaims } from '@/db/with-claims'
 import { tasks } from '@/db/schema'
 import type { NewTask } from '@/db/types'
-import { deleteTask, updateTask } from '@/app/dashboard/tasks/actions'
+import {
+  deleteTask,
+  updateTask,
+  updateTaskPriority,
+} from '@/app/dashboard/tasks/actions'
 import { initialCreateTaskState } from '@/lib/tasks/initial-create-task-state'
 import { eq } from 'drizzle-orm'
 
@@ -49,6 +53,13 @@ const getTaskFields = async (userId: string, id: string) => {
       .where(eq(tasks.id, id)),
   )
   return task
+}
+
+const getTaskPriority = async (userId: string, id: string) => {
+  const [task] = await withClaims(userId, (tx) =>
+    tx.select({ priority: tasks.priority }).from(tasks).where(eq(tasks.id, id)),
+  )
+  return task?.priority
 }
 
 const buildFormData = (fields: Record<string, string>) => {
@@ -273,6 +284,94 @@ describe('Tasks server actions', () => {
       ).rejects.toThrow(/without a session/)
 
       expect(await getTaskFields(alice, task.id)).toEqual(original)
+      expect(refresh).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('updateTaskPriority', () => {
+    const original = {
+      title: 'Edit task',
+      priority: 'medium',
+    } as const
+
+    it('updates own task priority, refreshes the page', async () => {
+      const task = await insertTask(alice, original)
+
+      signInAs(alice)
+      await updateTaskPriority(task.id, 'high')
+
+      expect(await getTaskPriority(alice, task.id)).toBe('high')
+      expect(refresh).toHaveBeenCalledOnce()
+    })
+
+    it('does not update other user task priority', async () => {
+      const task = await insertTask(alice, original)
+
+      signInAs(bob)
+      await updateTaskPriority(task.id, 'high')
+
+      expect(await getTaskPriority(alice, task.id)).toBe('medium')
+    })
+
+    it('updates only the given task priority', async () => {
+      const task = await insertTask(alice, original)
+      const otherTask = await insertTask(alice, {
+        title: 'Other task',
+        priority: 'low',
+      })
+
+      signInAs(alice)
+      await updateTaskPriority(task.id, 'high')
+
+      expect(await getTaskPriority(alice, task.id)).toBe('high')
+      expect(await getTaskPriority(alice, otherTask.id)).toBe('low')
+    })
+
+    it.each([
+      ['a non-uuid string', 'abc'],
+      ['a number', 42],
+      ['undefined', undefined],
+    ])('throws for %s as id without touching the database', async (_, id) => {
+      signInAs(alice)
+
+      await expect(updateTaskPriority(id, 'high')).rejects.toThrow(
+        'Invalid task id',
+      )
+
+      expect(auth.getSession).not.toHaveBeenCalled()
+      expect(refresh).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['an unknown priority', 'urgent'],
+      ['a number', 42],
+      ['undefined', undefined],
+      ['an empty string', ''],
+    ])(
+      'throws for %s as priority without touching the database',
+      async (_, priority) => {
+        signInAs(alice)
+
+        const task = await insertTask(alice, original)
+
+        await expect(updateTaskPriority(task.id, priority)).rejects.toThrow(
+          'Invalid priority',
+        )
+
+        expect(auth.getSession).not.toHaveBeenCalled()
+        expect(refresh).not.toHaveBeenCalled()
+        expect(await getTaskPriority(alice, task.id)).toBe('medium')
+      },
+    )
+
+    it('throws for a signed out user and keeps the task priority', async () => {
+      const task = await insertTask(alice, original)
+
+      await expect(updateTaskPriority(task.id, 'high')).rejects.toThrow(
+        /without a session/,
+      )
+
+      expect(await getTaskPriority(alice, task.id)).toBe('medium')
       expect(refresh).not.toHaveBeenCalled()
     })
   })

@@ -9,6 +9,7 @@ import { getString } from '@/lib/tasks/get-string'
 import { initialCreateTaskState } from '@/lib/tasks/initial-create-task-state'
 import { eq } from 'drizzle-orm'
 import { isUuid } from '@/lib/is-uuid'
+import { isTaskPriority } from '@/lib/tasks/is-task-priority'
 
 export const createTask = async (
   _prevState: TaskFormState,
@@ -71,5 +72,18 @@ export const updateTask = async (
 export const deleteTask = async (id: unknown) => {
   if (!isUuid(id)) return
   await withUserDb((tx) => tx.delete(tasks).where(eq(tasks.id, id)))
+  refresh()
+}
+
+export const updateTaskPriority = async (id: unknown, newPriority: unknown) => {
+  if (!isUuid(id)) {
+    throw new Error('Invalid task id')
+  }
+  if (!isTaskPriority(newPriority)) {
+    throw new Error('Invalid priority')
+  }
+  await withUserDb((tx) =>
+    tx.update(tasks).set({ priority: newPriority }).where(eq(tasks.id, id)),
+  )
   refresh()
 }

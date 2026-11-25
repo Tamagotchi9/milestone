@@ -2,11 +2,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import TaskCard from '@/components/tasks/TaskCard'
 
-// The delete dialog imports the action, which pulls in Neon Auth and
-// next/headers. The card tests only check rendering.
 vi.mock('@/app/dashboard/tasks/actions', () => ({
   deleteTask: vi.fn(),
   updateTask: vi.fn(),
+  updateTaskPriority: vi.fn(),
 }))
 
 const task = {
