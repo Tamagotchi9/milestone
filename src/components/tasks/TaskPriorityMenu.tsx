@@ -5,17 +5,16 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Task } from '@/db/types'
-import { startTransition, useOptimistic, useState } from 'react'
+import { startTransition, useOptimistic } from 'react'
 import { cn } from 'cn'
 import { TASK_PRIORITY_LABEL } from '@/lib/tasks/labels'
 import { updateTaskPriority } from '@/app/dashboard/tasks/actions'
 import { Badge } from '@/components/ui/badge'
 import { isTaskPriority } from '@/lib/tasks/is-task-priority'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDownIcon } from 'lucide-react'
 
 const priorityClassName: Record<Task['priority'], string> = {
   high: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
@@ -40,10 +39,8 @@ const TaskPriorityMenu = ({ id, priority }: TaskPriorityMenuProps) => {
     })
   }
 
-  const [isOpen, setIsOpen] = useState(false)
-
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Badge
           asChild
@@ -58,7 +55,8 @@ const TaskPriorityMenu = ({ id, priority }: TaskPriorityMenuProps) => {
           >
             <span aria-hidden className="size-1.5 rounded-full bg-current" />
             {TASK_PRIORITY_LABEL[optimisticPriority]}
-            {isOpen ? <ChevronUp></ChevronUp> : <ChevronDown></ChevronDown>}
+            {/* Radix sets data-state on the trigger, which is this badge */}
+            <ChevronDownIcon className="transition-transform duration-200 group-data-[state=open]/badge:rotate-180 motion-reduce:transition-none" />
           </button>
         </Badge>
       </DropdownMenuTrigger>
