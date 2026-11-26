@@ -25,6 +25,14 @@ vi.mock('@/lib/auth/server', () => ({
   auth: { getSession: vi.fn() },
 }))
 
+// The real redirect() throws an internal NEXT_REDIRECT error. The mock keeps
+// the throw, so the action still stops there, with a message to assert on.
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn((url: string) => {
+    throw new Error(`Redirected to ${url}`)
+  }),
+}))
+
 type Session = Awaited<ReturnType<typeof auth.getSession>>
 
 const signInAs = (userId: string) =>
@@ -154,10 +162,12 @@ describe('Tasks server actions', () => {
       },
     )
 
-    it('throws for a signed out user and keeps the task', async () => {
+    it('redirects a signed out user to sign in and keeps the task', async () => {
       const task = await insertTask(alice, { title: "Alice's task" })
 
-      await expect(deleteTask(task.id)).rejects.toThrow(/without a session/)
+      await expect(deleteTask(task.id)).rejects.toThrow(
+        'Redirected to /auth/sign-in',
+      )
 
       expect(await getTaskIds(alice)).toEqual([task])
       expect(refresh).not.toHaveBeenCalled()
@@ -276,12 +286,12 @@ describe('Tasks server actions', () => {
       expect(refresh).not.toHaveBeenCalled()
     })
 
-    it('throws for a signed out user and keeps the task', async () => {
+    it('redirects a signed out user to sign in and keeps the task', async () => {
       const task = await insertTask(alice, original)
 
       await expect(
         updateTask(task.id, idleState, buildFormData({ title: 'New title' })),
-      ).rejects.toThrow(/without a session/)
+      ).rejects.toThrow('Redirected to /auth/sign-in')
 
       expect(await getTaskFields(alice, task.id)).toEqual(original)
       expect(refresh).not.toHaveBeenCalled()
@@ -364,11 +374,11 @@ describe('Tasks server actions', () => {
       },
     )
 
-    it('throws for a signed out user and keeps the task priority', async () => {
+    it('redirects a signed out user to sign in and keeps the task priority', async () => {
       const task = await insertTask(alice, original)
 
       await expect(updateTaskPriority(task.id, 'high')).rejects.toThrow(
-        /without a session/,
+        'Redirected to /auth/sign-in',
       )
 
       expect(await getTaskPriority(alice, task.id)).toBe('medium')
